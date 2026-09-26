@@ -37,7 +37,7 @@ dependencies {
 
     // The plugin's own logic (argv building, CLI output parsing, .covdb reading) is deliberately
     // free of Project/EDT dependencies so it can be tested without an IDE fixture.
-    testImplementation(platform("org.junit:junit-bom:5.11.4"))
+    testImplementation(platform("org.junit:junit-bom:6.1.3"))
     testImplementation("org.junit.jupiter:junit-jupiter")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 
