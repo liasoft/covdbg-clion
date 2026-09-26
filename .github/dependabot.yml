@@ -3,6 +3,8 @@ updates:
   # Gradle plugins, libraries and the Gradle wrapper.
   - package-ecosystem: "gradle"
     directory: "/"
+    # Updates are development work, so they go to develop like any other change (see .gitflow).
+    target-branch: "develop"
     schedule:
       interval: "weekly"
     open-pull-requests-limit: 5
@@ -22,6 +24,7 @@ updates:
   # Actions used by the workflows in .github/workflows.
   - package-ecosystem: "github-actions"
     directory: "/"
+    target-branch: "develop"
     schedule:
       interval: "weekly"
     groups:

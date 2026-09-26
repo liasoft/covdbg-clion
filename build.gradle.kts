@@ -11,7 +11,9 @@ group = "com.covdbg"
 
 /** The Java version the oldest supported CLion runs on: both the toolchain and the bytecode target. */
 val JVM_TARGET = 21
-version = providers.gradleProperty("pluginVersion").get()
+// Derived from git by GitVersion (GitVersion.yml) and passed in by CI as -PpluginVersion. A local build
+// without it is marked as one rather than posing as a release.
+version = providers.gradleProperty("pluginVersion").getOrElse("0.0.0-dev")
 
 repositories {
     mavenCentral()
@@ -127,6 +129,9 @@ intellijPlatform {
     }
     publishing {
         token = providers.environmentVariable("PUBLISH_TOKEN")
+        // A pre-release such as 1.4.0-beta.1 goes to the Marketplace channel named by its label,
+        // a release to the default channel.
+        channels = listOf(version.toString().substringAfter('-', "").substringBefore('.').ifEmpty { "default" })
     }
 }
 

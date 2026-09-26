@@ -2,7 +2,8 @@ name: Build
 
 on:
   push:
-    branches: [main]
+    # The git flow branches (see .gitflow). Feature and bugfix branches build through their pull requests.
+    branches: [main, develop, "release/**", "hotfix/**"]
   pull_request:
   workflow_dispatch:
   release:
@@ -16,8 +17,27 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
+  version:
+    name: Determine version
+    runs-on: ubuntu-latest
+    outputs:
+      semVer: ${{ steps.gitversion.outputs.semVer }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          # GitVersion needs the full history and tags.
+          fetch-depth: 0
+
+      - uses: gittools/actions/gitversion/setup@v4
+        with:
+          versionSpec: "6.x"
+
+      - id: gitversion
+        uses: gittools/actions/gitversion/execute@v4
+
   build:
     name: Build and test
+    needs: version
     # The plugin is Windows-only and the tests use Windows paths.
     runs-on: windows-latest
     steps:
@@ -30,13 +50,13 @@ jobs:
 
       - uses: gradle/actions/setup-gradle@v6
 
-      - name: Test and build plugin
-        run: ./gradlew.bat test buildPlugin
+      - name: Test and build plugin ${{ needs.version.outputs.semVer }}
+        run: ./gradlew.bat test buildPlugin "-PpluginVersion=${{ needs.version.outputs.semVer }}"
 
       - name: Upload plugin
         uses: actions/upload-artifact@v7
         with:
-          name: covdbg-clion
+          name: covdbg-clion-${{ needs.version.outputs.semVer }}
           path: build/distributions/*.zip
           if-no-files-found: error
 
@@ -85,7 +105,8 @@ jobs:
           name: plugin-verifier-reports
           path: build/reports/pluginVerifier
 
-  # Publishes to the JetBrains Marketplace when a GitHub release is published. Disabled for now.
+  # Publishes to the JetBrains Marketplace when a GitHub release is published. Its tag (v1.3.0, or
+  # v1.4.0-beta.1 for the beta channel) sets the version. Disabled for now.
   # To enable:
   #   1. Create a "marketplace" environment in the repository settings with the secrets
   #      PUBLISH_TOKEN (Marketplace permanent token) and CERTIFICATE_CHAIN, PRIVATE_KEY,
@@ -94,7 +115,7 @@ jobs:
   #   2. Remove "false &&" from the condition below.
   publish:
     name: Publish to Marketplace
-    needs: [build, verify]
+    needs: [version, build, verify]
     if: false && github.event_name == 'release'
     runs-on: windows-latest
     environment: marketplace
@@ -109,7 +130,7 @@ jobs:
       - uses: gradle/actions/setup-gradle@v6
 
       - name: Publish plugin
-        run: ./gradlew.bat publishPlugin
+        run: ./gradlew.bat publishPlugin "-PpluginVersion=${{ needs.version.outputs.semVer }}"
         env:
           PUBLISH_TOKEN: ${{ secrets.PUBLISH_TOKEN }}
           CERTIFICATE_CHAIN: ${{ secrets.CERTIFICATE_CHAIN }}

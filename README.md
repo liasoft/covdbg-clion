@@ -124,10 +124,15 @@ parsing, `.covdb` reading and version comparison are kept free of `Project` and 
 they can be tested directly, which is why the IntelliJ platform test framework is not a dependency
 here.
 
+The plugin version is not written down anywhere: [GitVersion](https://gitversion.net) derives it
+from git history and tags (`GitVersion.yml`), and CI passes it to Gradle as `-PpluginVersion`. A
+local build without that property is versioned `0.0.0-dev`; to reproduce a CI version, pass it
+yourself, e.g. `.\gradlew.bat buildPlugin -PpluginVersion=1.3.0`.
+
 CI (`.github/workflows/build.yml`) runs `test` and `buildPlugin` on Windows and `verifyPlugin` on
-Linux for every push to `main` and every pull request. The plugin zip is attached to each run as the
-`covdbg-clion` artifact. A job that publishes to the JetBrains Marketplace on a GitHub release is
-prepared but disabled; the comment above it lists what enabling it takes.
+Linux for every push to the git flow branches and every pull request. The plugin zip is attached to
+each run as the `covdbg-clion-<version>` artifact. A job that publishes to the JetBrains Marketplace
+on a GitHub release is prepared but disabled; the comment above it lists what enabling it takes.
 
 ### Troubleshooting the build
 
@@ -153,6 +158,21 @@ Issues and pull requests are welcome at
 CLion plugin; covdbg itself is a separate product, so problems with covdbg's own behaviour
 (instrumentation, licensing, the `.covdb` format) belong with [covdbg](https://covdbg.com) rather
 than here. Before opening a pull request, run `.\gradlew.bat test verifyPlugin` (see *Building*).
+
+The repository follows [git flow](https://nvie.com/posts/a-successful-git-branching-model/), as
+configured in `.gitflow` (run `git flow init --shared` with
+[git-flow-next](https://git-flow.sh) to load it, or just use the branch names below):
+
+| Branch | Purpose | Version (GitVersion) |
+| --- | --- | --- |
+| `main` | Released code; every commit is a tagged release (`v1.3.0`) | `1.3.0` |
+| `develop` | Integration branch. Pull requests target it | `1.4.0-alpha.N` |
+| `feature/*`, `bugfix/*` | Work in progress, branched from and merged back into `develop` | labelled with the branch name |
+| `release/<version>` | Stabilising a release, branched from `develop`, merged into `main` and tagged | `1.4.0-beta.N` |
+| `hotfix/<version>` | Urgent fix, branched from `main`, merged into `main` and `develop` | `1.3.1-beta.N` |
+
+Releases follow the covdbg CLI release they support, so name release and hotfix branches after that
+version.
 The notes below explain design decisions that look odd at first sight.
 
 "Run with covdbg" on a CLion run configuration does not build a run of its own. `CovdbgCoverageRunner`
