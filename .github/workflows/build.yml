@@ -1,0 +1,105 @@
+name: Build
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  build:
+    name: Build and test
+    # The plugin is Windows-only and the tests use Windows paths.
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - uses: gradle/actions/setup-gradle@v6
+
+      - name: Test and build plugin
+        run: ./gradlew.bat test buildPlugin
+
+      - name: Upload plugin
+        uses: actions/upload-artifact@v7
+        with:
+          name: covdbg-clion
+          path: build/distributions/*.zip
+          if-no-files-found: error
+
+      - name: Upload test reports
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: test-reports
+          path: build/reports/tests
+
+  verify:
+    name: Verify plugin
+    # The verifier is static bytecode analysis, so it does not need Windows; Linux runners handle the
+    # two CLion downloads (both ends of the supported range) faster.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - uses: gradle/actions/setup-gradle@v6
+
+      # Also runs checkInternalApiUsages, which verifyPlugin is finalized by.
+      - name: Verify plugin
+        run: ./gradlew verifyPlugin
+
+      - name: Upload verifier reports
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: plugin-verifier-reports
+          path: build/reports/pluginVerifier
+
+  # Publishes to the JetBrains Marketplace when a GitHub release is published. Disabled for now.
+  # To enable:
+  #   1. Create a "marketplace" environment in the repository settings with the secrets
+  #      PUBLISH_TOKEN (Marketplace permanent token) and CERTIFICATE_CHAIN, PRIVATE_KEY,
+  #      PRIVATE_KEY_PASSWORD (plugin signing, see
+  #      https://plugins.jetbrains.com/docs/intellij/plugin-signing.html).
+  #   2. Remove "false &&" from the condition below.
+  publish:
+    name: Publish to Marketplace
+    needs: [build, verify]
+    if: false && github.event_name == 'release'
+    runs-on: windows-latest
+    environment: marketplace
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - uses: gradle/actions/setup-gradle@v6
+
+      - name: Publish plugin
+        run: ./gradlew.bat publishPlugin
+        env:
+          PUBLISH_TOKEN: ${{ secrets.PUBLISH_TOKEN }}
+          CERTIFICATE_CHAIN: ${{ secrets.CERTIFICATE_CHAIN }}
+          PRIVATE_KEY: ${{ secrets.PRIVATE_KEY }}
+          PRIVATE_KEY_PASSWORD: ${{ secrets.PRIVATE_KEY_PASSWORD }}

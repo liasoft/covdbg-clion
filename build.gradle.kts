@@ -117,6 +117,17 @@ intellijPlatform {
     }
 
     buildSearchableOptions = false
+
+    // Only signPlugin and publishPlugin read these; the publish job in .github/workflows/build.yml
+    // supplies them from repository secrets.
+    signing {
+        certificateChain = providers.environmentVariable("CERTIFICATE_CHAIN")
+        privateKey = providers.environmentVariable("PRIVATE_KEY")
+        password = providers.environmentVariable("PRIVATE_KEY_PASSWORD")
+    }
+    publishing {
+        token = providers.environmentVariable("PUBLISH_TOKEN")
+    }
 }
 
 // Runs the plugin - built against the oldest supported platform - inside the newest supported one.

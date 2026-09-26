@@ -124,6 +124,11 @@ parsing, `.covdb` reading and version comparison are kept free of `Project` and 
 they can be tested directly, which is why the IntelliJ platform test framework is not a dependency
 here.
 
+CI (`.github/workflows/build.yml`) runs `test` and `buildPlugin` on Windows and `verifyPlugin` on
+Linux for every push to `main` and every pull request. The plugin zip is attached to each run as the
+`covdbg-clion` artifact. A job that publishes to the JetBrains Marketplace on a GitHub release is
+prepared but disabled; the comment above it lists what enabling it takes.
+
 ### Troubleshooting the build
 
 **"The contents of the immutable workspace ... have been modified"** on any Gradle task. This reads

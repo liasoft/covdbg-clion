@@ -18,3 +18,13 @@ updates:
         update-types:
           - "version-update:semver-major"
           - "version-update:semver-minor"
+
+  # Actions used by the workflows in .github/workflows.
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    groups:
+      github-actions:
+        patterns:
+          - "*"
