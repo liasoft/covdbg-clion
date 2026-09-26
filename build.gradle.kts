@@ -45,7 +45,7 @@ dependencies {
 
     // The IntelliJ Platform Gradle Plugin runs the test task under the platform's own class loader,
     // which resolves JUnit 4 types while starting up. The tests themselves are JUnit 5; this is only
-    // here so that loader can initialise.
+    // here so that loader can initialize.
     testRuntimeOnly("junit:junit:4.13.2")
 }
 
@@ -63,7 +63,7 @@ intellijPlatform {
         }
 
         changeNotes = """
-            <h3>1.3.0</h3>
+            <h3>1.0.0</h3>
             <ul>
               <li>Support covdbg 1.3.0. Earlier covdbg releases are no longer compatible.</li>
               <li>covdbg is now found automatically on <code>PATH</code>, or at its usual install
