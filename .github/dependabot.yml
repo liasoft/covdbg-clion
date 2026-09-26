@@ -1,0 +1,20 @@
+version: 2
+updates:
+  # Gradle plugins, libraries and the Gradle wrapper.
+  - package-ecosystem: "gradle"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    groups:
+      gradle-minor-and-patch:
+        update-types:
+          - "minor"
+          - "patch"
+    ignore:
+      # Kotlin is pinned to match the oldest supported CLion platform; raising it is a deliberate
+      # change made together with platformVersion, not a routine bump (see README, Building).
+      - dependency-name: "org.jetbrains.kotlin*"
+        update-types:
+          - "version-update:semver-major"
+          - "version-update:semver-minor"
