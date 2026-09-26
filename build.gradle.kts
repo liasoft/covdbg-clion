@@ -3,7 +3,7 @@ import org.jetbrains.intellij.platform.gradle.tasks.VerifyPluginTask
 
 plugins {
     id("java")
-    id("org.jetbrains.kotlin.jvm") version "2.1.20"
+    id("org.jetbrains.kotlin.jvm") version "2.1.21"
     id("org.jetbrains.intellij.platform") version "2.19.0"
 }
 
@@ -33,7 +33,7 @@ dependencies {
 
         // No testFramework(...) on purpose: see the test dependencies below.
     }
-    implementation("org.xerial:sqlite-jdbc:3.45.1.0")
+    implementation("org.xerial:sqlite-jdbc:3.53.4.0")
 
     // The plugin's own logic (argv building, CLI output parsing, .covdb reading) is deliberately
     // free of Project/EDT dependencies so it can be tested without an IDE fixture.
@@ -178,7 +178,7 @@ kotlin {
 }
 
 // Internal API is allowed only where verifier-allowed-internal-api.txt says so; see failureLevel.
-val checkInternalApiUsages by tasks.registering {
+val checkInternalApiUsages = tasks.register("checkInternalApiUsages") {
     description = "Fails on internal API usages the plugin verifier found that are not explicitly allowed."
     val allowList = layout.projectDirectory.file("verifier-allowed-internal-api.txt")
     val reports = layout.buildDirectory.dir("reports/pluginVerifier")
