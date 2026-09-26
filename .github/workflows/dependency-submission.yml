@@ -1,0 +1,45 @@
+# Submits the Gradle dependency graph to GitHub, for Dependabot security alerts. Replaces GitHub's
+# automatic dependency submission (disable it under Settings -> Code security -> Dependency graph),
+# which resolves every configuration, including the IntelliJ Platform ones that are whole CLion
+# distributions, and runs out of disk.
+name: Dependency submission
+
+on:
+  push:
+    branches: [main, develop]
+  workflow_dispatch:
+
+permissions:
+  contents: write # required to submit the dependency graph
+
+jobs:
+  submit:
+    name: Submit dependencies
+    runs-on: ubuntu-latest
+    steps:
+      # The runner has only ~14 GB free, and configuring the build can still pull in the CLion
+      # distribution the plugin compiles against (archive and extracted copy) even though none of
+      # the included configurations contain it. Drop preinstalled toolchains this job never uses.
+      - name: Free disk space
+        run: |
+          df -h /
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /usr/local/.ghcup \
+            /opt/hostedtoolcache/CodeQL /usr/local/share/boost /usr/local/share/powershell \
+            /usr/share/swift /usr/local/julia*
+          sudo docker image prune --all --force > /dev/null 2>&1 || true
+          df -h /
+
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - uses: gradle/actions/dependency-submission@v6
+        with:
+          # What ships in the plugin zip (runtimeClasspath), what the tests run with
+          # (testRuntimeClasspath) and the build's own plugins (classpath). Leaves out the IntelliJ
+          # Platform configurations - the CLion builds the plugin compiles, runs and is verified
+          # against - which the IDE provides at runtime and which are not dependencies of the plugin.
+          dependency-graph-include-configurations: "^(classpath|runtimeClasspath|testRuntimeClasspath)$"
