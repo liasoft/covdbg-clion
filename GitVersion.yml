@@ -11,4 +11,4 @@
 workflow: GitFlow/v1
 
 # No release has been tagged yet; the first one supports covdbg 1.3.0.
-next-version: 1.3.0
+next-version: 1.0.0
