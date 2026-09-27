@@ -17,6 +17,7 @@ import com.intellij.notification.Notification
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.Key
+import com.intellij.openapi.util.io.FileUtil
 import java.io.File
 
 /**
@@ -81,7 +82,15 @@ class CovdbgRunMonitor(
 
     private fun report(outcome: CovdbgRunOutcome) {
         when (outcome) {
-            is CovdbgRunOutcome.Success -> loadCoverage(outcome.outputPath, outcome.gated)
+            is CovdbgRunOutcome.Success -> {
+                // Load the path this run asked covdbg to write, not the one read back from its output:
+                // that went through the console's charset, and a non-ASCII project path comes back
+                // mangled. The printed path only confirms covdbg wrote where it was told to.
+                if (!FileUtil.pathsEqual(outcome.outputPath, plan.outputCovdbPath)) {
+                    LOG.info("covdbg reported ${outcome.outputPath}; loading ${plan.outputCovdbPath}")
+                }
+                loadCoverage(plan.outputCovdbPath, outcome.gated)
+            }
 
             is CovdbgRunOutcome.NotLicensed -> notifyNotLicensed(outcome.message)
 

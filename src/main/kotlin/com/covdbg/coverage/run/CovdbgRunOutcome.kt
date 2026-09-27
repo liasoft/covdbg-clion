@@ -4,8 +4,9 @@ package com.covdbg.coverage.run
 sealed interface CovdbgRunOutcome {
 
     /**
-     * Coverage was written and may be loaded. [gated] means covdbg pruned it to the ten most-hit
-     * files because reporting is gated for the account.
+     * Coverage was written and may be loaded. [outputPath] is where covdbg says it wrote, as printed,
+     * so only good for comparing and logging: it went through the console's charset. [gated] means
+     * covdbg pruned the database to the ten most-hit files because reporting is gated for the account.
      */
     data class Success(val outputPath: String, val gated: Boolean = false) : CovdbgRunOutcome
 
