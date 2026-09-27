@@ -10,6 +10,7 @@ import com.covdbg.coverage.db.CovdbReader
 import com.covdbg.coverage.seats.CovdbgLoginTask
 import com.covdbg.coverage.seats.CovdbgSeatService
 import com.intellij.execution.process.ProcessEvent
+import com.intellij.execution.process.ProcessHandler
 import com.intellij.execution.process.ProcessListener
 import com.intellij.execution.process.ProcessOutputType
 import com.intellij.ide.BrowserUtil
@@ -58,6 +59,13 @@ class CovdbgRunMonitor(
         // event log until expired and holds this object, so the captured output goes now.
         clearCapturedOutput()
         LOG.info("covdbg exited with ${event.exitCode}: $outcome")
+        // Stopped by the user: killing covdbg is not a failure to explain. A database covdbg had
+        // already written is still loaded.
+        if (outcome !is CovdbgRunOutcome.Success &&
+            event.processHandler.getUserData(ProcessHandler.TERMINATION_REQUESTED) == true
+        ) {
+            return
+        }
         report(outcome)
     }
 
