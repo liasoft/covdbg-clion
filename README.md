@@ -24,9 +24,9 @@ covdbg records it as the sum of its blocks' hits.
 | Licensing | A signed-in seat, or `COVDBG_PROJECT_TOKEN` in the environment |
 | Configuration | A `.covdbg.yaml` in the repository |
 
-Earlier covdbg releases will not work: 1.3.0 removed the `--appdata`, `--license`, `--license-file`
-and `--fetch-license` options this plugin used to pass, and replaced them with seat licensing. When
-the installed covdbg is too old, a run fails with covdbg rejecting an option, and the plugin says so.
+Earlier covdbg releases will not work: the plugin relies on seat licensing and the command-line
+options introduced in covdbg 1.3.0. When the installed covdbg is too old, a run fails with covdbg
+rejecting an option, and the plugin says so.
 
 ## Getting started
 
@@ -127,7 +127,7 @@ here.
 The plugin version is not written down anywhere: [GitVersion](https://gitversion.net) derives it
 from git history and tags (`GitVersion.yml`), and CI passes it to Gradle as `-PpluginVersion`. A
 local build without that property is versioned `0.0.0-dev`; to reproduce a CI version, pass it
-yourself, e.g. `.\gradlew.bat buildPlugin -PpluginVersion=1.3.0`.
+yourself, e.g. `.\gradlew.bat buildPlugin -PpluginVersion=1.0.0`.
 
 CI (`.github/workflows/build.yml`) runs `test` and `buildPlugin` on Windows and `verifyPlugin` on
 Linux for every push to the git flow branches and every pull request. The plugin zip is attached to
@@ -165,14 +165,15 @@ configured in `.gitflow` (run `git flow init --shared` with
 
 | Branch | Purpose | Version (GitVersion) |
 | --- | --- | --- |
-| `main` | Released code; every commit is a tagged release (`v1.3.0`) | `1.3.0` |
-| `develop` | Integration branch. Pull requests target it | `1.4.0-alpha.N` |
+| `main` | Released code; every commit is a tagged release (`v1.0.0`) | `1.0.0` |
+| `develop` | Integration branch. Pull requests target it | `1.1.0-alpha.N` |
 | `feature/*`, `bugfix/*` | Work in progress, branched from and merged back into `develop` | labelled with the branch name |
-| `release/<version>` | Stabilising a release, branched from `develop`, merged into `main` and tagged | `1.4.0-beta.N` |
-| `hotfix/<version>` | Urgent fix, branched from `main`, merged into `main` and `develop` | `1.3.1-beta.N` |
+| `release/v<version>` | Stabilising a release, branched from `develop`, merged into `main` and tagged | `1.1.0-beta.N` |
+| `hotfix/v<version>` | Urgent fix, branched from `main`, merged into `main` and `develop` | `1.0.1-beta.N` |
 
-Releases follow the covdbg CLI release they support, so name release and hotfix branches after that
-version.
+Plugin versions are independent of covdbg's; the covdbg release a plugin version requires is stated
+under *Requirements* and in the plugin's change notes.
+
 The notes below explain design decisions that look odd at first sight.
 
 "Run with covdbg" on a CLion run configuration does not build a run of its own. `CovdbgCoverageRunner`
