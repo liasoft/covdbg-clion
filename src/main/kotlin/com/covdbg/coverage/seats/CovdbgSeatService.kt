@@ -3,6 +3,7 @@ package com.covdbg.coverage.seats
 import com.covdbg.coverage.run.CovdbgArgs
 import com.covdbg.coverage.run.CovdbgExecutableResolver
 import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.application.ModalityState
 import com.intellij.openapi.components.Service
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.project.Project
@@ -69,10 +70,12 @@ class CovdbgSeatService(private val project: Project) {
         cached = status
         probedAt = System.nanoTime()
         if (!changed || project.isDisposed) return
-        ApplicationManager.getApplication().invokeLater {
+        // Any modality: the listeners only repaint (the status bar widget, the settings page), and the
+        // settings page is a modal dialog that would otherwise see the change only once it closes.
+        ApplicationManager.getApplication().invokeLater({
             if (project.isDisposed) return@invokeLater
             project.messageBus.syncPublisher(CovdbgSeatListener.TOPIC).signInStatusChanged(status)
-        }
+        }, ModalityState.any())
     }
 
     /** Blocking probe. Never call on the EDT. */

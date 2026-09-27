@@ -12,6 +12,7 @@ import com.covdbg.coverage.seats.CovdbgSeatService
 import com.covdbg.coverage.seats.SignInStatus
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.application.ModalityState
 import com.covdbg.coverage.ui.chooseFile
 import com.intellij.openapi.options.SearchableConfigurable
 import com.intellij.openapi.project.Project
@@ -183,6 +184,13 @@ class CovdbgSettingsConfigurable(private val project: Project) : SearchableConfi
         logFileField.text = state.logFile
         symbolEngineCombo.selectedItem = state.symbolEngine
         followChildrenCheckbox.isSelected = state.followChildren
+
+        // Setting the path field fires no change when the text stays the same - always the case for
+        // the default, empty path - so the version would never be looked up. Do it directly, in place
+        // of the debounced request any change did queue.
+        if (!::probeAlarm.isInitialized) return
+        probeAlarm.cancelAllRequests()
+        refreshRuntimeInfo()
     }
 
     override fun disposeUIResources() {
@@ -211,8 +219,8 @@ class CovdbgSettingsConfigurable(private val project: Project) : SearchableConfi
         ApplicationManager.getApplication().executeOnPooledThread {
             val resolved = CovdbgExecutableResolver.resolve(configured)
             val version = resolved?.let { CovdbgRuntimeInfoService.getInstance().version(it.path) }
-            ApplicationManager.getApplication().invokeLater {
-                if (covdbgPathField.text.trim() != configured) return@invokeLater
+            ApplicationManager.getApplication().invokeLater({
+                if (panel == null || covdbgPathField.text.trim() != configured) return@invokeLater
                 versionLabel.text = when {
                     resolved == null -> "covdbg was not found on PATH or at a known install location"
                     version == null -> "${resolved.describe()} — not runnable, or it reported no version"
@@ -220,7 +228,11 @@ class CovdbgSettingsConfigurable(private val project: Project) : SearchableConfi
                         "covdbg $version at ${resolved.describe()} — ${CovdbgVersion.REQUIREMENT}"
                     else -> "covdbg $version at ${resolved.describe()}"
                 }
-            }
+                // The Settings dialog is modal: in the default, non-modal state this would be queued
+                // behind it and run only once it closes. Any modality is safe for a label update that
+                // does nothing once the page is gone - and the page may not be inside the dialog yet
+                // when reset() asks, so its component's modality cannot be relied on.
+            }, ModalityState.any())
         }
     }
 
