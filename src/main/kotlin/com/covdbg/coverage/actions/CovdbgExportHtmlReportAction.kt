@@ -16,6 +16,7 @@ import com.intellij.openapi.progress.ProgressManager
 import com.intellij.openapi.progress.Task
 import com.intellij.openapi.project.DumbAware
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.util.io.FileUtil
 import java.io.File
 
 /**
@@ -54,6 +55,9 @@ class CovdbgExportHtmlReportAction : AnAction(), DumbAware {
 
             val projectRoot = project.basePath ?: File(covdbPath).parent
             val outputDir = CovdbgLayout.htmlDirFor(projectRoot, covdbPath)
+            // The plugin's own directory, emptied first: an index.html left by an earlier export would
+            // otherwise pass for this one's when covdbg writes nothing.
+            FileUtil.delete(outputDir)
             outputDir.mkdirs()
 
             val result = CovdbgCli.capture(
@@ -65,9 +69,21 @@ class CovdbgExportHtmlReportAction : AnAction(), DumbAware {
                     sourceRoot = projectRoot
                 ),
                 projectRoot,
-                TIMEOUT_MS
+                TIMEOUT_MS,
+                indicator
             )
 
+            if (result.cancelled) {
+                CovdbgNotifications.info(project, "HTML report export cancelled.")
+                return
+            }
+            if (result.timedOut) {
+                CovdbgNotifications.error(
+                    project,
+                    "covdbg convert did not finish within ${TIMEOUT_MS / 60_000} minutes and was stopped."
+                )
+                return
+            }
             if (result.exitCode != 0) {
                 CovdbgNotifications.error(
                     project,

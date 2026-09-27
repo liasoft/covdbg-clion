@@ -3,6 +3,7 @@ package com.covdbg.coverage.seats
 import com.intellij.execution.configurations.GeneralCommandLine
 import com.intellij.execution.process.CapturingProcessHandler
 import com.intellij.openapi.diagnostic.Logger
+import com.intellij.openapi.progress.ProgressIndicator
 import java.io.File
 
 /** Result of a short, captured covdbg invocation. */
@@ -10,7 +11,9 @@ data class CliResult(
     val exitCode: Int,
     val stdout: String,
     val stderr: String,
-    val timedOut: Boolean
+    val timedOut: Boolean,
+    /** The progress indicator was cancelled, and covdbg was killed. */
+    val cancelled: Boolean = false
 )
 
 /**
@@ -24,7 +27,17 @@ object CovdbgCli {
 
     private val LOG = Logger.getInstance(CovdbgCli::class.java)
 
-    fun capture(exe: String, args: List<String>, workDir: String?, timeoutMs: Int): CliResult {
+    /**
+     * @param indicator When given, cancelling it kills covdbg - for commands the user waits on, such
+     *   as `convert`, where Cancel must not leave them waiting out the timeout.
+     */
+    fun capture(
+        exe: String,
+        args: List<String>,
+        workDir: String?,
+        timeoutMs: Int,
+        indicator: ProgressIndicator? = null
+    ): CliResult {
         val cmd = GeneralCommandLine(exe)
         cmd.addParameters(args)
         if (!workDir.isNullOrBlank()) {
@@ -32,8 +45,13 @@ object CovdbgCli {
         }
 
         return try {
-            val output = CapturingProcessHandler(cmd).runProcess(timeoutMs)
-            CliResult(output.exitCode, output.stdout, output.stderr, output.isTimeout)
+            val handler = CapturingProcessHandler(cmd)
+            val output = if (indicator != null) {
+                handler.runProcessWithProgressIndicator(indicator, timeoutMs)
+            } else {
+                handler.runProcess(timeoutMs)
+            }
+            CliResult(output.exitCode, output.stdout, output.stderr, output.isTimeout, output.isCancelled)
         } catch (e: Exception) {
             LOG.debug("covdbg ${args.joinToString(" ")} could not be run", e)
             CliResult(-1, "", e.message ?: "covdbg could not be started", false)
