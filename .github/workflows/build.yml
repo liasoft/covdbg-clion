@@ -105,13 +105,15 @@ jobs:
           name: plugin-verifier-reports
           path: build/reports/pluginVerifier
 
-  # Publishes to the JetBrains Marketplace when a GitHub release is published. Its tag (v1.3.0, or
-  # v1.4.0-beta.1 for the beta channel) sets the version. Disabled for now.
-  # To enable:
-  #   1. Create a "marketplace" environment in the repository settings with the secrets
-  #      PUBLISH_TOKEN (Marketplace permanent token) and CERTIFICATE_CHAIN, PRIVATE_KEY,
-  #      PRIVATE_KEY_PASSWORD (plugin signing, see
-  #      https://plugins.jetbrains.com/docs/intellij/plugin-signing.html).
+  # Publishes to the JetBrains Marketplace when a GitHub release is published. Its tag (v1.0.0, or
+  # v1.1.0-beta.1 for the beta channel) sets the version.
+  #
+  # Needs a "marketplace" environment in the repository settings with the secrets PUBLISH_TOKEN
+  # (Marketplace permanent token) and CERTIFICATE_CHAIN, PRIVATE_KEY, PRIVATE_KEY_PASSWORD (plugin
+  # signing, see https://plugins.jetbrains.com/docs/intellij/plugin-signing.html).
+  #
+  # The Marketplace accepts only updates from here: the plugin's first version has to be uploaded by
+  # hand at https://plugins.jetbrains.com/plugin/add, so this job cannot publish it.
   publish:
     name: Publish to Marketplace
     needs: [version, build, verify]
