@@ -65,7 +65,7 @@ class CovdbgLoginTask(project: Project) :
             LOG.info("covdbg login could not be started", e)
             CovdbgNotifications.error(
                 project,
-                "${e.message ?: "covdbg could not be started."}<br/>Check the Covdbg path in Settings.",
+                "${CovdbgNotifications.escape(e.message ?: "covdbg could not be started.")}<br/>Check the Covdbg path in Settings.",
                 "covdbg sign-in failed"
             )?.openSettingsAction()
             return
@@ -140,7 +140,7 @@ class CovdbgLoginTask(project: Project) :
         promptNotification = CovdbgNotifications.notify(
             project = project,
             type = NotificationType.INFORMATION,
-            content = "Open $url and confirm the code <b>$code</b> there.",
+            content = "Open ${CovdbgNotifications.escape(url)} and confirm the code <b>${CovdbgNotifications.escape(code)}</b> there.",
             title = "Confirm your covdbg sign-in",
             group = CovdbgNotifications.SIGN_IN_GROUP
         ) {
@@ -159,7 +159,7 @@ class CovdbgLoginTask(project: Project) :
     }
 
     private fun notifySignedIn() {
-        val headline = lastKnownEmail?.let { "Signed in to covdbg as $it" } ?: "Signed in to covdbg"
+        val headline = lastKnownEmail?.let { "Signed in to covdbg as ${CovdbgNotifications.escape(it)}" } ?: "Signed in to covdbg"
         CovdbgNotifications.info(
             project,
             "$headline.<br/>Seats, teams and your personal lock are managed at " +
@@ -176,7 +176,7 @@ class CovdbgLoginTask(project: Project) :
             }
         // Nothing below needs the transcript, and the retry action keeps this task in the event log.
         stderr.setLength(0)
-        CovdbgNotifications.error(project, detail, "covdbg sign-in failed")
+        CovdbgNotifications.error(project, CovdbgNotifications.escape(detail), "covdbg sign-in failed")
             ?.action("Try Again") { CovdbgLoginTask(it).queue() }
     }
 

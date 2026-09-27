@@ -87,8 +87,8 @@ class CovdbgExportHtmlReportAction : AnAction(), DumbAware {
             if (result.exitCode != 0) {
                 CovdbgNotifications.error(
                     project,
-                    result.stderr.lines().firstInteresting()
-                        ?: result.stdout.lines().firstInteresting()
+                    (result.stderr.lines().firstInteresting() ?: result.stdout.lines().firstInteresting())
+                        ?.let(CovdbgNotifications::escape)
                         ?: "covdbg convert exited with ${result.exitCode}."
                 )
                 return
@@ -100,7 +100,7 @@ class CovdbgExportHtmlReportAction : AnAction(), DumbAware {
             if (!entry.exists()) {
                 CovdbgNotifications.warn(
                     project,
-                    "covdbg reported success but no report was found under ${outputDir.absolutePath}."
+                    "covdbg reported success but no report was found under ${CovdbgNotifications.escape(outputDir.absolutePath)}."
                 )
                 return
             }
@@ -110,7 +110,7 @@ class CovdbgExportHtmlReportAction : AnAction(), DumbAware {
             // left for the launcher to re-encode, so the browser gets a mangled address. Path.toUri()
             // gives the canonical file:///D:/... with everything encoded exactly once.
             BrowserUtil.browse(entry.toPath().toUri())
-            CovdbgNotifications.info(project, "HTML coverage report: ${entry.absolutePath}")
+            CovdbgNotifications.info(project, "HTML coverage report: ${CovdbgNotifications.escape(entry.absolutePath)}")
         }
 
         private companion object {

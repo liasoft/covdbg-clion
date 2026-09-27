@@ -117,14 +117,19 @@ class CovdbgRunMonitor(
             is CovdbgRunOutcome.Failed ->
                 CovdbgNotifications.error(
                     project,
-                    outcome.detail ?: "covdbg produced no diagnostic output.",
+                    outcome.detail?.let(CovdbgNotifications::escape)
+                        ?: "covdbg produced no diagnostic output.",
                     "covdbg run failed (exit code ${outcome.exitCode})"
                 )?.addOpenLogAction()
         }
     }
 
     private fun notifyNotLicensed(message: String) {
-        CovdbgNotifications.error(project, message, "This covdbg run is not licensed")
+        CovdbgNotifications.error(
+            project,
+            CovdbgNotifications.escape(message),
+            "This covdbg run is not licensed"
+        )
             ?.action("Sign In to covdbg") { CovdbgLoginTask(it).queue() }
             ?.action("Manage Seats") { BrowserUtil.browse(CovdbgNotifications.SERVICE_URL) }
 
@@ -137,7 +142,8 @@ class CovdbgRunMonitor(
         val looked = if (searchedDirs.isEmpty()) {
             ""
         } else {
-            "<br/>Looked in:<br/>" + searchedDirs.joinToString("<br/>") { "&nbsp;&nbsp;$it" }
+            "<br/>Looked in:<br/>" +
+                searchedDirs.joinToString("<br/>") { "&nbsp;&nbsp;${CovdbgNotifications.escape(it)}" }
         }
         CovdbgNotifications.error(
             project,
@@ -153,7 +159,7 @@ class CovdbgRunMonitor(
             ?: ""
         CovdbgNotifications.error(
             project,
-            "$detail<br/>${CovdbgVersion.REQUIREMENT}.$found",
+            "${CovdbgNotifications.escape(detail)}<br/>${CovdbgVersion.REQUIREMENT}.$found",
             "covdbg rejected an option"
         )
     }
@@ -188,7 +194,7 @@ class CovdbgRunMonitor(
             LOG.warn("Failed to load coverage data from $pathToLoad", e)
             CovdbgNotifications.error(
                 project,
-                e.message ?: e.javaClass.simpleName,
+                CovdbgNotifications.escape(e.message ?: e.javaClass.simpleName),
                 "Failed to load coverage data"
             )
         }
@@ -205,7 +211,7 @@ class CovdbgRunMonitor(
         val log = File(plan.logFilePath)
         action("Open Log") { project ->
             if (!CovdbgEditors.open(project, log)) {
-                CovdbgNotifications.info(project, "No covdbg log at ${log.absolutePath}")
+                CovdbgNotifications.info(project, "No covdbg log at ${CovdbgNotifications.escape(log.absolutePath)}")
             }
         }
     }

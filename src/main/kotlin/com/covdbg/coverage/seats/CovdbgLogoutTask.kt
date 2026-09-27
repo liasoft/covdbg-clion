@@ -25,7 +25,7 @@ class CovdbgLogoutTask(project: Project) :
         val result = CovdbgCli.capture(exe, CovdbgArgs.logout(), project.basePath, TIMEOUT_MS)
         when (val parsed = LogoutOutputParser.parse(result.stdout)) {
             is LogoutOutputParser.Result.SignedOut ->
-                CovdbgNotifications.info(project, "Signed out of covdbg (${parsed.email}).")
+                CovdbgNotifications.info(project, "Signed out of covdbg (${CovdbgNotifications.escape(parsed.email)}).")
             LogoutOutputParser.Result.WasNotSignedIn ->
                 CovdbgNotifications.info(project, "Not signed in to covdbg.")
             is LogoutOutputParser.Result.Unknown -> {
@@ -33,9 +33,9 @@ class CovdbgLogoutTask(project: Project) :
                     ?: result.stderr.lines().firstInteresting()
                     ?: "covdbg logout exited with ${result.exitCode}."
                 if (result.exitCode == 0) {
-                    CovdbgNotifications.warn(project, detail)
+                    CovdbgNotifications.warn(project, CovdbgNotifications.escape(detail))
                 } else {
-                    CovdbgNotifications.error(project, detail)
+                    CovdbgNotifications.error(project, CovdbgNotifications.escape(detail))
                 }
             }
         }

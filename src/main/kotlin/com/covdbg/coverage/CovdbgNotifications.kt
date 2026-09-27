@@ -7,6 +7,7 @@ import com.intellij.notification.NotificationType
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.options.ShowSettingsUtil
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.util.text.StringUtil
 
 /**
  * The plugin's notifications, in one place.
@@ -25,6 +26,13 @@ object CovdbgNotifications {
     const val SERVICE_URL = "https://app.covdbg.com"
 
     const val SETTINGS_ID = "covdbg.settings"
+
+    /**
+     * [text] made safe to put in a notification, whose content is HTML. Anything the plugin did not
+     * write itself - covdbg's or the target's output, exception messages, paths, e-mail addresses -
+     * goes through this, or a `<stdin>` or `std::vector<int>` in a diagnostic simply disappears.
+     */
+    fun escape(text: String): String = StringUtil.escapeXmlEntities(text)
 
     fun info(project: Project, content: String, title: String? = null): Notification? =
         notify(project, NotificationType.INFORMATION, content, title)
