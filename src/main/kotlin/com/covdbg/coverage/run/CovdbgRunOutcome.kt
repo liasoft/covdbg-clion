@@ -44,7 +44,6 @@ object CovdbgOutcomeClassifier {
     const val UNEXPECTED_ARG_MARKER = "The following argument"
     const val NOT_WRITTEN_MARKER = "no coverage database was written to"
 
-    const val EXIT_SUCCESS = 0
     const val EXIT_NO_FUNCTIONS_TO_TRACK = 2
 
     fun classify(
@@ -61,6 +60,21 @@ object CovdbgOutcomeClassifier {
             return CovdbgRunOutcome.NotLicensed(licenseMessageOf(line))
         }
 
+        // Then success, whatever the exit code and whatever else was printed. covdbg says this only
+        // once it has written this run's database, and it is the one line the target cannot fake by
+        // accident. stderr carries the target's own stderr too - under a PTY it is all output - so a
+        // test that prints "The following argument was not expected" or exits with 2 must not turn a
+        // written database into a failure. `contains`, not `startsWith`: a terminal may prefix the
+        // line with escape sequences.
+        stdoutLines.firstOrNull { it.contains(COVERAGE_WRITTEN_PREFIX) }?.let { written ->
+            return CovdbgRunOutcome.Success(
+                outputPath = written.substringAfter(COVERAGE_WRITTEN_PREFIX).trim(),
+                gated = stdoutLines.any { it.contains(GATED_MARKER) }
+            )
+        }
+
+        // Nothing was written, so these are covdbg's own verdicts: all of them stop the run before or
+        // instead of writing a database.
         if (exitCode == EXIT_NO_FUNCTIONS_TO_TRACK) {
             return CovdbgRunOutcome.NoFunctionsToTrack
         }
@@ -71,16 +85,6 @@ object CovdbgOutcomeClassifier {
 
         stderrLines.firstOrNull { it.contains(UNEXPECTED_ARG_MARKER) }?.let { line ->
             return CovdbgRunOutcome.StaleCli(line.trim())
-        }
-
-        if (exitCode == EXIT_SUCCESS) {
-            val written = stdoutLines.firstOrNull { it.trimStart().startsWith(COVERAGE_WRITTEN_PREFIX) }
-            if (written != null) {
-                return CovdbgRunOutcome.Success(
-                    outputPath = written.trimStart().removePrefix(COVERAGE_WRITTEN_PREFIX).trim(),
-                    gated = stdoutLines.any { it.contains(GATED_MARKER) }
-                )
-            }
         }
 
         // covdbg says so itself when it could not write the database, on stdout and with a non-zero
