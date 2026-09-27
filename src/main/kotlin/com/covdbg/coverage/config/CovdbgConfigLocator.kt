@@ -49,10 +49,15 @@ object CovdbgConfigLocator {
     /**
      * Resolves the configuration for a run, running covdbg's own search once.
      *
-     * An explicit path wins. Otherwise covdbg discovers one, and when its search would come up empty
-     * the project's own `.covdbg.yaml` is passed with `--config`: CLion runs CMake targets and tests
-     * in the build tree (`cmake-build-debug/tests`, say), which is also where the binary is, so
-     * covdbg's search never reaches the file at the repository root.
+     * An explicit path wins. A relative one is taken from the project root, where the user sees it,
+     * and passed absolute: covdbg would resolve it against the working directory, which for a CMake
+     * target is the build tree. A configured file that does not exist is still passed - covdbg then
+     * says so - but [Resolution.file] is null, so the pre-flight check can warn about it.
+     *
+     * Otherwise covdbg discovers one, and when its search would come up empty the project's own
+     * `.covdbg.yaml` is passed with `--config`: CLion runs CMake targets and tests in the build tree
+     * (`cmake-build-debug/tests`, say), which is also where the binary is, so covdbg's search never
+     * reaches the file at the repository root.
      */
     fun resolve(
         configured: String?,
@@ -61,7 +66,10 @@ object CovdbgConfigLocator {
         targetExe: String?,
         env: (String) -> String? = System::getenv
     ): Resolution {
-        if (configured != null) return Resolution(File(configured), configured)
+        if (configured != null) {
+            val file = File(configured).let { if (it.isAbsolute) it else File(projectRoot, configured) }
+            return Resolution(file.takeIf { it.isFile }, file.absolutePath)
+        }
         discover(workDir, targetExe, env)?.let { return Resolution(it, null) }
         val atRoot = File(projectRoot, CovdbgConfigTemplate.FILE_NAME).takeIf { it.isFile }
         return Resolution(atRoot, atRoot?.absolutePath)

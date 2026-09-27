@@ -23,9 +23,9 @@ class CovdbgCommandLineState(
 
     private val plan = CovdbgRunPlan.create(
         environment.project,
-        target = config.targetExecutable,
+        target = expanded(config.targetExecutable),
         workingDirectory = expanded(config.workingDirectory),
-        configOverride = config.covdbgConfigPath,
+        configOverride = expanded(config.covdbgConfigPath),
         followChildren = config.followChildren,
         mode = config.mode
     )

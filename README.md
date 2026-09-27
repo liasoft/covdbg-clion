@@ -80,9 +80,9 @@ Project-level, under *Settings | Build, Execution, Deployment | Covdbg*.
 | Setting | Effect |
 | --- | --- |
 | Covdbg path | Overrides automatic lookup. Empty means `PATH`, then the known install locations |
-| Default config path | `--config`. Empty lets covdbg discover `.covdbg.yaml` from the working directory |
+| Default config path | `--config`. A relative path is taken from the project root. Empty lets covdbg discover `.covdbg.yaml` from the working directory |
 | Log level | `--log-level` |
-| Log file | `--log-file`. Empty uses covdbg's default, `.covdbg/Logs/covdbg.log` in the working directory |
+| Log file | `--log-file`. A relative path is taken from the project root. Empty uses covdbg's default, `.covdbg/Logs/covdbg.log` in the working directory |
 | Symbol engine | `--symbol-engine`. Empty uses covdbg's default |
 | Follow child processes when running CLion configurations | `--follow-children` for *Run with covdbg* on a CLion run configuration. covdbg run configurations have their own checkbox |
 

@@ -53,6 +53,9 @@ class CovdbgRunPlan private constructor(
     /** The configuration file covdbg will use, or null when it will refuse the run. */
     val configFile: File? get() = config.file
 
+    /** The path passed with `--config`, or null when covdbg discovers the configuration itself. */
+    val configArgument: String? get() = config.configArgument
+
     /** Creates the directory the database is written to; covdbg does not. */
     fun prepareOutput() {
         FileUtil.createParentDirs(File(outputCovdbPath))
@@ -91,7 +94,12 @@ class CovdbgRunPlan private constructor(
                 ),
                 searchedDirectories = CovdbgConfigLocator.searchedDirectories(projectRoot, workDir, target),
                 outputCovdbPath = CovdbgLayout.covdbFor(projectRoot, target).absolutePath,
-                logFilePath = state.logFile.ifBlank { CovdbgLayout.logFile(workDir).absolutePath },
+                // A relative setting is taken from the project root, like a relative config path: covdbg
+                // would resolve it against the working directory, and "Open Log" against the IDE's.
+                logFilePath = state.logFile.ifBlank { null }
+                    ?.let { File(it).takeIf(File::isAbsolute) ?: File(projectRoot, it) }
+                    ?.absolutePath
+                    ?: CovdbgLayout.logFile(workDir).absolutePath,
                 mode = mode,
                 followChildren = followChildren,
                 logLevel = state.logLevel,
