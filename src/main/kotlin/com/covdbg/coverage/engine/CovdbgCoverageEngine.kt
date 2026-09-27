@@ -48,8 +48,11 @@ class CovdbgCoverageEngine : CoverageEngine() {
         timestamp: Long
     ): CoverageSuite = CovdbgCoverageSuite(name, project, runner, fileProvider, timestamp)
 
-    override fun getCoverageAnnotator(project: Project): CoverageAnnotator =
-        CovdbgCoverageAnnotator.getInstance(project)
+    override fun getCoverageAnnotator(project: Project): CoverageAnnotator {
+        // Asked before covdbg coverage is loaded, so the tab icon's listener is in place for its tab.
+        CovdbgCoverageTabIcon.getInstance(project)
+        return CovdbgCoverageAnnotator.getInstance(project)
+    }
 
     override fun getQualifiedNames(sourceFile: PsiFile): Set<String> =
         setOfNotNull(sourceFile.virtualFile?.path)

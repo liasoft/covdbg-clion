@@ -58,12 +58,6 @@
                                 implementation="com.covdbg.coverage.ui.CovdbgSignInStatusWidgetFactory"/>
     </extensions>
 
-    <projectListeners>
-        <!-- Marks Coverage tool window tabs that show covdbg coverage with the covdbg logo. -->
-        <listener class="com.covdbg.coverage.engine.CovdbgCoverageTabIcon"
-                  topic="com.intellij.openapi.wm.ex.ToolWindowManagerListener"/>
-    </projectListeners>
-
     <!-- Puts covdbg in front of the target when CovdbgCoverageRunner runs a CLion configuration. -->
     <extensions defaultExtensionNs="cidr">
         <runConfigurationExtension implementation="com.covdbg.coverage.run.CovdbgRunConfigurationExtension"/>
