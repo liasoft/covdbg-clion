@@ -3,6 +3,7 @@ package com.covdbg.coverage.run
 import com.covdbg.coverage.config.CovdbgConfigLocator
 import com.covdbg.coverage.config.CovdbgLayout
 import com.covdbg.coverage.settings.CovdbgSettings
+import com.intellij.execution.ExecutionException
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.io.FileUtil
 import java.io.File
@@ -73,8 +74,10 @@ class CovdbgRunPlan private constructor(
             followChildren: Boolean,
             mode: String
         ): CovdbgRunPlan {
+            // An ExecutionException reaches the user as the run's error; anything else would be
+            // reported as an internal IDE error.
             val projectRoot = project.basePath
-                ?: throw IllegalStateException("Cannot determine project root directory")
+                ?: throw ExecutionException("covdbg needs a project directory to write coverage to.")
             val state = CovdbgSettings.getInstance(project).state
             val workDir = workingDirectory?.takeIf { it.isNotBlank() } ?: projectRoot
             return CovdbgRunPlan(

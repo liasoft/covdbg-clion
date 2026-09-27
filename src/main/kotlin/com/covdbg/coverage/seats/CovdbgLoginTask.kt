@@ -2,9 +2,11 @@ package com.covdbg.coverage.seats
 
 import com.covdbg.coverage.CovdbgNotifications
 import com.covdbg.coverage.CovdbgNotifications.action
+import com.covdbg.coverage.CovdbgNotifications.openSettingsAction
 import com.covdbg.coverage.run.CovdbgArgs
 import com.covdbg.coverage.run.CovdbgExecutableResolver
 import com.covdbg.coverage.run.LineAssembler
+import com.intellij.execution.ExecutionException
 import com.intellij.execution.configurations.GeneralCommandLine
 import com.intellij.execution.process.KillableProcessHandler
 import com.intellij.execution.process.ProcessEvent
@@ -56,7 +58,18 @@ class CovdbgLoginTask(project: Project) :
             project.basePath?.let { workDirectory = File(it) }
         }
 
-        val handler = KillableProcessHandler(cmd)
+        // The Covdbg path setting is honoured even when it points nowhere, so starting can fail.
+        val handler = try {
+            KillableProcessHandler(cmd)
+        } catch (e: ExecutionException) {
+            LOG.info("covdbg login could not be started", e)
+            CovdbgNotifications.error(
+                project,
+                "${e.message ?: "covdbg could not be started."}<br/>Check the Covdbg path in Settings.",
+                "covdbg sign-in failed"
+            )?.openSettingsAction()
+            return
+        }
         val lines = LineAssembler { line, isError ->
             if (isError) stderr.appendLine(line) else onStdoutLine(line, indicator)
         }

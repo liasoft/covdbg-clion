@@ -69,9 +69,11 @@ object CovdbgExecutableResolver {
         exists: (String) -> Boolean = { File(it).isFile }
     ): ResolvedCovdbg? {
         // An explicit setting is honoured even when it does not exist, so a typo is reported as the
-        // broken path the user typed rather than silently replaced by something else.
-        if (configuredPath.isNotBlank()) {
-            return ResolvedCovdbg(configuredPath.trim(), CovdbgExecutableSource.SETTING)
+        // broken path the user typed rather than silently replaced by something else. Quotes are
+        // dropped: Explorer's "Copy as path" adds them, and no Windows path contains one.
+        val configured = configuredPath.trim().removeSurrounding("\"").trim()
+        if (configured.isNotEmpty()) {
+            return ResolvedCovdbg(configured, CovdbgExecutableSource.SETTING)
         }
 
         findOnPath()?.let {

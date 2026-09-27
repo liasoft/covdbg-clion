@@ -166,7 +166,9 @@ class CovdbgRunMonitor(
                 CovdbgNotifications.info(project, message)
             }
         } catch (e: Exception) {
-            LOG.error("Failed to load coverage data from $pathToLoad", e)
+            // A locked, truncated or foreign database is the environment's doing, and the user is told
+            // below. LOG.error would also raise the IDE's internal-error indicator against the plugin.
+            LOG.warn("Failed to load coverage data from $pathToLoad", e)
             CovdbgNotifications.error(
                 project,
                 e.message ?: e.javaClass.simpleName,

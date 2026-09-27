@@ -53,6 +53,20 @@ class CovdbgExecutableResolverTest {
     }
 
     @Test
+    fun `quotes from Explorer's Copy as path are dropped`() {
+        val resolved = resolve(configured = """  "D:\custom tools\covdbg.exe"  """)
+        assertEquals(ResolvedCovdbg("""D:\custom tools\covdbg.exe""", CovdbgExecutableSource.SETTING), resolved)
+    }
+
+    @Test
+    fun `a setting of only quotes falls through to PATH`() {
+        assertEquals(
+            ResolvedCovdbg(onPath, CovdbgExecutableSource.PATH),
+            resolve(configured = "\"\"", foundOnPath = onPath)
+        )
+    }
+
+    @Test
     fun `a blank setting falls through to PATH`() {
         assertEquals(
             ResolvedCovdbg(onPath, CovdbgExecutableSource.PATH),
