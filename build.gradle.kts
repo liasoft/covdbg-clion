@@ -45,7 +45,7 @@ dependencies {
 
     // The IntelliJ Platform Gradle Plugin runs the test task under the platform's own class loader,
     // which resolves JUnit 4 types while starting up. The tests themselves are JUnit 5; this is only
-    // here so that loader can initialise.
+    // here so that loader can initialize.
     testRuntimeOnly("junit:junit:4.13.2")
 }
 
@@ -63,40 +63,33 @@ intellijPlatform {
         }
 
         changeNotes = """
-            <h3>1.3.0</h3>
+            <h3>1.0.0</h3>
+            <p>First release. Requires covdbg 1.3.0 or newer and supports CLion 2025.3 through
+            2026.2 with the MSVC toolchain on Windows.</p>
             <ul>
-              <li>Support covdbg 1.3.0. Earlier covdbg releases are no longer compatible.</li>
-              <li>covdbg is now found automatically on <code>PATH</code>, or at its usual install
-                  locations, so the Covdbg path setting is only needed to override that.</li>
-              <li>Supports CLion 2025.3 through 2026.2.</li>
-              <li>Seat licensing: sign in and out of covdbg from Tools | covdbg or the status bar,
-                  which shows the signed-in account; the settings panel shows it too. The removed
-                  <code>--license</code>, <code>--license-file</code>, <code>--fetch-license</code>
-                  and <code>--appdata</code> options are gone, along with their settings fields.</li>
-              <li>A coverage run is now a single covdbg invocation. The separate analyze and merge
-                  steps are obsolete: covdbg analyses the target before running it, so
-                  never-executed code already appears with zero hits, and code in an unlinked static
-                  library is covered by <code>baseline:</code> in <code>.covdbg.yaml</code>.</li>
-              <li>Run results are reported from covdbg's exit code and output rather than from
-                  whether a database file happens to exist, so a refused run no longer shows the
-                  previous run's coverage.</li>
-              <li>Gated reports are detected from covdbg's own output and labelled in the run's
-                  notification.</li>
-              <li>New options: follow child processes, symbol engine, and a custom log file.</li>
-              <li>Create a starter <code>.covdbg.yaml</code> when a run has no configuration.</li>
-              <li>"Run with covdbg" runs the configuration itself and puts covdbg in front of the
-                  target, so it behaves as a normal run: the test tree and rerunning failed tests,
-                  building before launch, the toolchain environment, macros, environment variables,
-                  input redirection, terminal emulation and administrator privileges.</li>
-              <li>Coverage is shown through CLion's own coverage UI: the editor gutter, now with
-                  partially covered lines, the Coverage tool window, Show Coverage Data for earlier
-                  runs, and Import External Coverage Report for <code>.covdb</code> files. The
-                  separate covdbg tool window, the display-mode widget and its settings are gone.</li>
+              <li>Run any CLion run configuration with covdbg. covdbg is put in front of the
+                  target, so it behaves as a normal run: building before launch, the toolchain
+                  environment, macros, environment variables, input redirection, terminal emulation,
+                  administrator privileges, and the test tree with rerunning failed tests.</li>
+              <li>Coverage is shown in CLion's own coverage UI: the editor gutter with covered,
+                  partially covered and uncovered lines, the Coverage tool window, Show Coverage Data
+                  for earlier runs, and Import External Coverage Report for <code>.covdb</code>
+                  files.</li>
+              <li>A coverage run is a single covdbg invocation. Never-executed code appears with zero
+                  hits, and code in an unlinked static library can be included with
+                  <code>baseline:</code> in <code>.covdbg.yaml</code>.</li>
               <li>Export an offline HTML coverage report.</li>
-              <li>The detected covdbg version is shown in the settings panel.</li>
+              <li>Sign in and out of covdbg from Tools | covdbg or the status bar widget, which shows
+                  the signed-in account. <code>COVDBG_PROJECT_TOKEN</code> is recognised for CI.</li>
+              <li>Run results are reported from covdbg's exit code and output: refused, unlicensed
+                  and gated runs, missing configuration and filters that match nothing each get a
+                  clear notification.</li>
+              <li>Create a starter <code>.covdbg.yaml</code> when a run has no configuration.</li>
+              <li>covdbg is found automatically on <code>PATH</code> or at its usual install
+                  locations; the settings panel shows which executable and version were found.</li>
+              <li>Options for following child processes, the symbol engine, log level and log
+                  file.</li>
             </ul>
-            <p>Settings saved by earlier versions keep a few now-unused entries in
-            <code>covdbg.xml</code> until settings are next applied. They are ignored.</p>
         """.trimIndent()
     }
 

@@ -74,7 +74,9 @@ class CovdbReader(covdbPath: String) : Closeable {
             """
         ),
         totalLines = queryInt("SELECT COUNT(*) FROM line_coverage WHERE is_executable = 1"),
-        coveredLines = queryInt("SELECT COUNT(*) FROM line_coverage WHERE execution_count > 0")
+        coveredLines = queryInt(
+            "SELECT COUNT(*) FROM line_coverage WHERE is_executable = 1 AND execution_count > 0"
+        )
     )
 
     /** Single-value COUNT query, closed after use. */

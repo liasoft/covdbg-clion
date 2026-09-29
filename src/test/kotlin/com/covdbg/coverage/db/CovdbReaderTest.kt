@@ -69,6 +69,22 @@ class CovdbReaderTest {
     }
 
     @Test
+    fun `covered lines count only executable lines, so coverage cannot exceed 100 percent`() {
+        // A line covdbg marks non-executable can still carry a hit count; counting it as covered but
+        // not in the total would report more covered lines than lines.
+        val db = fixture(dir = tempDir, name = "nonexecutable.covdb") { connection ->
+            connection.createStatement().use {
+                it.executeUpdate("""INSERT INTO line_coverage VALUES ('C:\proj\src\b.cpp', 13, 7, 0)""")
+            }
+        }
+        CovdbReader(db).use { reader ->
+            val summary = reader.getCoverageSummary()
+            assertEquals(4, summary.totalLines)
+            assertEquals(2, summary.coveredLines)
+        }
+    }
+
+    @Test
     fun `all executable lines come back with the blocks mapped to them`(@TempDir dir: Path) {
         val db = fixture(dir, "lines.covdb")
         CovdbReader(db).use { reader ->

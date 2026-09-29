@@ -39,13 +39,18 @@ class CovdbgRunConfiguration(
         if (project.basePath == null) return
         val plan = CovdbgRunPlan.create(
             project,
-            target = targetExecutable,
+            target = CovdbgMacros.expand(targetExecutable, project, validation = true),
             workingDirectory = CovdbgMacros.expand(workingDirectory, project, validation = true),
-            configOverride = covdbgConfigPath,
+            configOverride = CovdbgMacros.expand(covdbgConfigPath, project, validation = true),
             followChildren = followChildren,
             mode = mode
         )
         if (plan.configFile == null) {
+            // A configuration named explicitly - here or in Settings - that is not there.
+            plan.configArgument?.let { configured ->
+                @Suppress("DialogTitleCapitalization")
+                throw RuntimeConfigurationWarning("$configured does not exist. covdbg will refuse the run.")
+            }
             val looked = plan.searchedDirectories.joinToString(", ") { it.absolutePath }
             @Suppress("DialogTitleCapitalization")
             throw RuntimeConfigurationWarning(

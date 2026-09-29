@@ -55,10 +55,33 @@ class CovdbgConfigLocatorTest {
 
     @Test
     fun `an explicit config is passed as it is`(@TempDir root: File) {
+        val explicit = File(root, "cfg/my.yaml").apply { parentFile.mkdirs(); writeText("x") }
         val (workDir, target) = layout(root)
 
-        val resolution = CovdbgConfigLocator.resolve("""C:\cfg\my.yaml""", root.path, workDir, target, noEnv)
-        assertEquals("""C:\cfg\my.yaml""", resolution.configArgument)
+        val resolution = CovdbgConfigLocator.resolve(explicit.absolutePath, root.path, workDir, target, noEnv)
+        assertEquals(explicit.absoluteFile, resolution.file)
+        assertEquals(explicit.absolutePath, resolution.configArgument)
+    }
+
+    @Test
+    fun `a relative explicit config is taken from the project root, not the build tree`(@TempDir root: File) {
+        val ci = File(root, "ci/.covdbg.yaml").apply { parentFile.mkdirs(); writeText("x") }
+        val (workDir, target) = layout(root)
+
+        val resolution = CovdbgConfigLocator.resolve("ci/.covdbg.yaml", root.path, workDir, target, noEnv)
+        assertEquals(ci.absoluteFile, resolution.file)
+        assertEquals(ci.absolutePath, resolution.configArgument)
+    }
+
+    @Test
+    fun `a missing explicit config is still passed but not reported as found`(@TempDir root: File) {
+        File(root, CovdbgConfigTemplate.FILE_NAME).writeText("root")
+        val (workDir, target) = layout(root)
+        val missing = File(root, "nope.yaml")
+
+        val resolution = CovdbgConfigLocator.resolve(missing.absolutePath, root.path, workDir, target, noEnv)
+        assertNull(resolution.file)
+        assertEquals(missing.absolutePath, resolution.configArgument)
     }
 
     @Test

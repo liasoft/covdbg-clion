@@ -66,7 +66,7 @@ object CovdbgConfigWriter {
                 LOG.warn("Could not create ${CovdbgConfigTemplate.FILE_NAME}", e)
                 CovdbgNotifications.error(
                     project,
-                    "Could not create ${CovdbgConfigTemplate.FILE_NAME}: ${e.message}"
+                    "Could not create ${CovdbgConfigTemplate.FILE_NAME}: ${CovdbgNotifications.escape(e.message.orEmpty())}"
                 )
             }
         }

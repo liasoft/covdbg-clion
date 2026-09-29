@@ -10,6 +10,7 @@ import com.covdbg.coverage.db.CovdbReader
 import com.covdbg.coverage.seats.CovdbgLoginTask
 import com.covdbg.coverage.seats.CovdbgSeatService
 import com.intellij.execution.process.ProcessEvent
+import com.intellij.execution.process.ProcessHandler
 import com.intellij.execution.process.ProcessListener
 import com.intellij.execution.process.ProcessOutputType
 import com.intellij.ide.BrowserUtil
@@ -17,6 +18,7 @@ import com.intellij.notification.Notification
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.Key
+import com.intellij.openapi.util.io.FileUtil
 import java.io.File
 
 /**
@@ -57,6 +59,13 @@ class CovdbgRunMonitor(
         // event log until expired and holds this object, so the captured output goes now.
         clearCapturedOutput()
         LOG.info("covdbg exited with ${event.exitCode}: $outcome")
+        // Stopped by the user: killing covdbg is not a failure to explain. A database covdbg had
+        // already written is still loaded.
+        if (outcome !is CovdbgRunOutcome.Success &&
+            event.processHandler.getUserData(ProcessHandler.TERMINATION_REQUESTED) == true
+        ) {
+            return
+        }
         report(outcome)
     }
 
@@ -81,7 +90,15 @@ class CovdbgRunMonitor(
 
     private fun report(outcome: CovdbgRunOutcome) {
         when (outcome) {
-            is CovdbgRunOutcome.Success -> loadCoverage(outcome.outputPath, outcome.gated)
+            is CovdbgRunOutcome.Success -> {
+                // Load the path this run asked covdbg to write, not the one read back from its output:
+                // that went through the console's charset, and a non-ASCII project path comes back
+                // mangled. The printed path only confirms covdbg wrote where it was told to.
+                if (!FileUtil.pathsEqual(outcome.outputPath, plan.outputCovdbPath)) {
+                    LOG.info("covdbg reported ${outcome.outputPath}; loading ${plan.outputCovdbPath}")
+                }
+                loadCoverage(plan.outputCovdbPath, outcome.gated)
+            }
 
             is CovdbgRunOutcome.NotLicensed -> notifyNotLicensed(outcome.message)
 
@@ -100,14 +117,19 @@ class CovdbgRunMonitor(
             is CovdbgRunOutcome.Failed ->
                 CovdbgNotifications.error(
                     project,
-                    outcome.detail ?: "covdbg produced no diagnostic output.",
+                    outcome.detail?.let(CovdbgNotifications::escape)
+                        ?: "covdbg produced no diagnostic output.",
                     "covdbg run failed (exit code ${outcome.exitCode})"
                 )?.addOpenLogAction()
         }
     }
 
     private fun notifyNotLicensed(message: String) {
-        CovdbgNotifications.error(project, message, "This covdbg run is not licensed")
+        CovdbgNotifications.error(
+            project,
+            CovdbgNotifications.escape(message),
+            "This covdbg run is not licensed"
+        )
             ?.action("Sign In to covdbg") { CovdbgLoginTask(it).queue() }
             ?.action("Manage Seats") { BrowserUtil.browse(CovdbgNotifications.SERVICE_URL) }
 
@@ -120,7 +142,8 @@ class CovdbgRunMonitor(
         val looked = if (searchedDirs.isEmpty()) {
             ""
         } else {
-            "<br/>Looked in:<br/>" + searchedDirs.joinToString("<br/>") { "&nbsp;&nbsp;$it" }
+            "<br/>Looked in:<br/>" +
+                searchedDirs.joinToString("<br/>") { "&nbsp;&nbsp;${CovdbgNotifications.escape(it)}" }
         }
         CovdbgNotifications.error(
             project,
@@ -136,7 +159,7 @@ class CovdbgRunMonitor(
             ?: ""
         CovdbgNotifications.error(
             project,
-            "$detail<br/>${CovdbgVersion.REQUIREMENT}.$found",
+            "${CovdbgNotifications.escape(detail)}<br/>${CovdbgVersion.REQUIREMENT}.$found",
             "covdbg rejected an option"
         )
     }
@@ -166,10 +189,12 @@ class CovdbgRunMonitor(
                 CovdbgNotifications.info(project, message)
             }
         } catch (e: Exception) {
-            LOG.error("Failed to load coverage data from $pathToLoad", e)
+            // A locked, truncated or foreign database is the environment's doing, and the user is told
+            // below. LOG.error would also raise the IDE's internal-error indicator against the plugin.
+            LOG.warn("Failed to load coverage data from $pathToLoad", e)
             CovdbgNotifications.error(
                 project,
-                e.message ?: e.javaClass.simpleName,
+                CovdbgNotifications.escape(e.message ?: e.javaClass.simpleName),
                 "Failed to load coverage data"
             )
         }
@@ -186,7 +211,7 @@ class CovdbgRunMonitor(
         val log = File(plan.logFilePath)
         action("Open Log") { project ->
             if (!CovdbgEditors.open(project, log)) {
-                CovdbgNotifications.info(project, "No covdbg log at ${log.absolutePath}")
+                CovdbgNotifications.info(project, "No covdbg log at ${CovdbgNotifications.escape(log.absolutePath)}")
             }
         }
     }

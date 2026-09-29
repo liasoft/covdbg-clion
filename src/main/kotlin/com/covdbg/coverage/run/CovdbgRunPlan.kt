@@ -3,6 +3,7 @@ package com.covdbg.coverage.run
 import com.covdbg.coverage.config.CovdbgConfigLocator
 import com.covdbg.coverage.config.CovdbgLayout
 import com.covdbg.coverage.settings.CovdbgSettings
+import com.intellij.execution.ExecutionException
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.io.FileUtil
 import java.io.File
@@ -52,6 +53,9 @@ class CovdbgRunPlan private constructor(
     /** The configuration file covdbg will use, or null when it will refuse the run. */
     val configFile: File? get() = config.file
 
+    /** The path passed with `--config`, or null when covdbg discovers the configuration itself. */
+    val configArgument: String? get() = config.configArgument
+
     /** Creates the directory the database is written to; covdbg does not. */
     fun prepareOutput() {
         FileUtil.createParentDirs(File(outputCovdbPath))
@@ -73,8 +77,10 @@ class CovdbgRunPlan private constructor(
             followChildren: Boolean,
             mode: String
         ): CovdbgRunPlan {
+            // An ExecutionException reaches the user as the run's error; anything else would be
+            // reported as an internal IDE error.
             val projectRoot = project.basePath
-                ?: throw IllegalStateException("Cannot determine project root directory")
+                ?: throw ExecutionException("covdbg needs a project directory to write coverage to.")
             val state = CovdbgSettings.getInstance(project).state
             val workDir = workingDirectory?.takeIf { it.isNotBlank() } ?: projectRoot
             return CovdbgRunPlan(
@@ -88,7 +94,12 @@ class CovdbgRunPlan private constructor(
                 ),
                 searchedDirectories = CovdbgConfigLocator.searchedDirectories(projectRoot, workDir, target),
                 outputCovdbPath = CovdbgLayout.covdbFor(projectRoot, target).absolutePath,
-                logFilePath = state.logFile.ifBlank { CovdbgLayout.logFile(workDir).absolutePath },
+                // A relative setting is taken from the project root, like a relative config path: covdbg
+                // would resolve it against the working directory, and "Open Log" against the IDE's.
+                logFilePath = state.logFile.ifBlank { null }
+                    ?.let { File(it).takeIf(File::isAbsolute) ?: File(projectRoot, it) }
+                    ?.absolutePath
+                    ?: CovdbgLayout.logFile(workDir).absolutePath,
                 mode = mode,
                 followChildren = followChildren,
                 logLevel = state.logLevel,

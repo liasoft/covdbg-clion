@@ -28,6 +28,51 @@ class CovdbgOutcomeClassifierTest {
     }
 
     @Test
+    fun `the target's own stderr cannot turn a written database into a failure`() {
+        // A target with a CLI11-style parser, or one that happens to mention a missing configuration,
+        // prints covdbg's failure markers on its own stderr. covdbg still wrote this run's database.
+        val outcome = CovdbgOutcomeClassifier.classify(
+            0,
+            listOf("covdbg: coverage written to $outputPath"),
+            listOf(
+                "The following argument was not expected: --x",
+                "Error: No configuration file found."
+            )
+        )
+        assertEquals(CovdbgRunOutcome.Success(outputPath, gated = false), outcome)
+    }
+
+    @Test
+    fun `a target that exits with 2 still has its coverage loaded`() {
+        val outcome = CovdbgOutcomeClassifier.classify(
+            2,
+            listOf("[  FAILED  ] 1 test.", "covdbg: coverage written to $outputPath"),
+            emptyList()
+        )
+        assertEquals(CovdbgRunOutcome.Success(outputPath, gated = false), outcome)
+    }
+
+    @Test
+    fun `a written database is loaded even when covdbg passes on a failing exit code`() {
+        val outcome = CovdbgOutcomeClassifier.classify(
+            1,
+            listOf("[  FAILED  ] 3 tests.", "covdbg: coverage written to $outputPath"),
+            listOf("tests.cpp(42): error: Expected equality")
+        )
+        assertEquals(CovdbgRunOutcome.Success(outputPath, gated = false), outcome)
+    }
+
+    @Test
+    fun `a written line behind terminal escape sequences is still found`() {
+        val outcome = CovdbgOutcomeClassifier.classify(
+            0,
+            listOf("\u001B[0m\u001B[?25hcovdbg: coverage written to $outputPath"),
+            emptyList()
+        )
+        assertEquals(CovdbgRunOutcome.Success(outputPath, gated = false), outcome)
+    }
+
+    @Test
     fun `a gated banner alongside a written database marks the success as gated`() {
         val outcome = CovdbgOutcomeClassifier.classify(
             0,
@@ -165,6 +210,19 @@ class CovdbgOutcomeClassifierTest {
         val outcome = classifyMerged(
             0,
             listOf("covdbg: collecting coverage for app.exe", "hello", "covdbg: coverage written to $outputPath")
+        )
+        assertEquals(CovdbgRunOutcome.Success(outputPath, gated = false), outcome)
+    }
+
+    @Test
+    fun `a merged stream with the target's failure markers is still a success`() {
+        val outcome = classifyMerged(
+            0,
+            listOf(
+                "covdbg: collecting coverage for app.exe",
+                "The following argument was not expected: --x",
+                "covdbg: coverage written to $outputPath"
+            )
         )
         assertEquals(CovdbgRunOutcome.Success(outputPath, gated = false), outcome)
     }

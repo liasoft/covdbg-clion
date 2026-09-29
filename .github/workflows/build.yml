@@ -105,20 +105,27 @@ jobs:
           name: plugin-verifier-reports
           path: build/reports/pluginVerifier
 
-  # Publishes to the JetBrains Marketplace when a GitHub release is published. Its tag (v1.3.0, or
-  # v1.4.0-beta.1 for the beta channel) sets the version. Disabled for now.
-  # To enable:
-  #   1. Create a "marketplace" environment in the repository settings with the secrets
-  #      PUBLISH_TOKEN (Marketplace permanent token) and CERTIFICATE_CHAIN, PRIVATE_KEY,
-  #      PRIVATE_KEY_PASSWORD (plugin signing, see
-  #      https://plugins.jetbrains.com/docs/intellij/plugin-signing.html).
-  #   2. Remove "false &&" from the condition below.
+  # Publishes to the JetBrains Marketplace when a GitHub release is published. Its tag (v1.0.0, or
+  # v1.1.0-beta.1 for the beta channel) sets the version.
+  #
+  # Needs a "marketplace" environment in the repository settings with the secrets PUBLISH_TOKEN
+  # (Marketplace permanent token) and CERTIFICATE_CHAIN, PRIVATE_KEY, PRIVATE_KEY_PASSWORD (plugin
+  # signing, see https://plugins.jetbrains.com/docs/intellij/plugin-signing.html).
+  #
+  # The Marketplace accepts only updates from here: the plugin's first version has to be uploaded by
+  # hand at https://plugins.jetbrains.com/plugin/add, so this job cannot publish it. The signed zip
+  # is uploaded as the run's covdbg-clion-<version>-signed artifact before publishing, so it is there
+  # for that manual upload even when publishing fails.
   publish:
     name: Publish to Marketplace
     needs: [version, build, verify]
-    if: false && github.event_name == 'release'
+    if: github.event_name == 'release'
     runs-on: windows-latest
     environment: marketplace
+    env:
+      CERTIFICATE_CHAIN: ${{ secrets.CERTIFICATE_CHAIN }}
+      PRIVATE_KEY: ${{ secrets.PRIVATE_KEY }}
+      PRIVATE_KEY_PASSWORD: ${{ secrets.PRIVATE_KEY_PASSWORD }}
     steps:
       - uses: actions/checkout@v7
 
@@ -129,10 +136,18 @@ jobs:
 
       - uses: gradle/actions/setup-gradle@v6
 
+      - name: Sign plugin ${{ needs.version.outputs.semVer }}
+        run: ./gradlew.bat signPlugin "-PpluginVersion=${{ needs.version.outputs.semVer }}"
+
+      - name: Upload signed plugin
+        uses: actions/upload-artifact@v7
+        with:
+          name: covdbg-clion-${{ needs.version.outputs.semVer }}-signed
+          path: build/distributions/*-signed.zip
+          if-no-files-found: error
+
+      # Publishes the signed zip built above; Gradle finds signPlugin up to date.
       - name: Publish plugin
         run: ./gradlew.bat publishPlugin "-PpluginVersion=${{ needs.version.outputs.semVer }}"
         env:
           PUBLISH_TOKEN: ${{ secrets.PUBLISH_TOKEN }}
-          CERTIFICATE_CHAIN: ${{ secrets.CERTIFICATE_CHAIN }}
-          PRIVATE_KEY: ${{ secrets.PRIVATE_KEY }}
-          PRIVATE_KEY_PASSWORD: ${{ secrets.PRIVATE_KEY_PASSWORD }}
