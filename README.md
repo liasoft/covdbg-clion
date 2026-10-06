@@ -204,11 +204,18 @@ both; the signatures were checked identical in 253 and 262. Avoid
 `untilBuild` is bounded rather than open, so a platform that has not been looked at is refused
 instead of silently misbehaving — widening the range is a deliberate act.
 
-Internal platform API fails the build, with one listed exception. The platform coverage gutter
-finds a file's coverage only through `CoverageEngine.getQualifiedName(File, PsiFile)`, which is
-internal, so `CovdbgCoverageEngine` overrides it, as CLion's own coverage engine does.
-`verifier-allowed-internal-api.txt` allows exactly that, and `checkInternalApiUsages` (run after
-`verifyPlugin`) fails on any other internal usage the verifier reports.
+Internal platform API fails the build (`verifyPlugin`), with no exceptions: the Marketplace rejects
+a plugin that uses any. That is why `engine/CovdbgEditorCoverage.kt` paints the editor gutter itself
+instead of leaving it to the platform. The platform gutter finds a file's coverage only through
+`CoverageEngine.getQualifiedName(File, PsiFile)`, which is internal and answers null unless
+overridden, and every other way into it (`getCorrespondingOutputFiles`, `createSrcFileAnnotator`,
+`getLineMarkerRenderer`) is internal too. So `CovdbgCoverageEngine` turns the platform gutter off
+for covdbg, and the plugin draws the same bars, in the scheme's coverage colors, from the shown
+suite's data. Closing a coverage tab is announced to no suite listener, only to the engine's
+annotator, so `CovdbgCoverageAnnotator.onSuiteChosen` is what clears the gutter then.
+Clicking a bar opens `CovdbgCoveragePopup`, a public-API copy of the platform's gutter hint (which
+is shown through the internal `HintManagerImpl`); its "Hide coverage" link is the platform's own
+`HideCoverage` action.
 
 `verifyPlugin` checks both ends of the supported range (`platformVersion` and `verifyAgainstVersion`
 in `gradle.properties`). It only proves API compatibility — it reported *Compatible* for the typed

@@ -23,8 +23,8 @@
         decides what is measured; the plugin can create a starter one for you.</p>
 
         <p><b>What you get.</b> Run any CLion run configuration under covdbg and see the result in
-        CLion's own coverage UI: the editor gutter, including partially covered lines, the Coverage
-        tool window, and the history of earlier runs. Existing <code>.covdb</code> files can be
+        CLion: the editor gutter, including partially covered lines, CLion's Coverage tool window,
+        and the history of earlier runs. Existing <code>.covdb</code> files can be
         imported, and exported as an offline HTML report.</p>
     ]]></description>
 
@@ -42,7 +42,8 @@
         <programRunner implementation="com.covdbg.coverage.run.CovdbgCoverageRunner"/>
         <executor implementation="com.covdbg.coverage.run.CovdbgExecutor"
                   id="CovdbgCoverageExecutor"/>
-        <!-- Coverage is presented by the platform: gutter, Coverage tool window, suite history. -->
+        <!-- Coverage is presented in the platform's Coverage tool window and suite history; the editor
+             gutter is painted by the plugin (engine/CovdbgEditorCoverage.kt). -->
         <coverageEngine implementation="com.covdbg.coverage.engine.CovdbgCoverageEngine"/>
         <coverageRunner implementation="com.covdbg.coverage.engine.CovdbCoverageRunner"/>
         <projectConfigurable

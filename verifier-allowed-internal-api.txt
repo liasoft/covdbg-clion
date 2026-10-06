@@ -1,7 +1,0 @@
-# Internal API the plugin is allowed to use: one regular expression per line, matched against each
-# line of the verifier's internal-api-usages.txt. Anything not matched fails verifyPlugin.
-#
-# The platform coverage gutter looks a file's coverage up only through this method; its default
-# answers null, so without the override no line is ever painted. CLion's own engine overrides it too.
-# See CovdbgCoverageEngine.getQualifiedName.
-^Internal method com\.intellij\.coverage\.CoverageEngine\.getQualifiedName\(java\.io\.File .*\) : java\.lang\.String is overridden in class com\.covdbg\.coverage\.engine\.CovdbgCoverageEngine\..*
