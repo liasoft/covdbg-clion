@@ -63,6 +63,15 @@ intellijPlatform {
         }
 
         changeNotes = """
+            <h3>1.0.1</h3>
+            <ul>
+              <li>The editor gutter's coverage marks are now drawn by the plugin itself, so it no longer
+                  relies on internal IntelliJ Platform API. They look as before, in the color scheme's
+                  coverage colors.</li>
+              <li>Hovering over a coverage mark shows the line's hits. Clicking it opens a popup with
+                  the hits, buttons to step to the previous or next coverage mark, and the Hide
+                  coverage link.</li>
+            </ul>
             <h3>1.0.0</h3>
             <p>First release. Requires covdbg 1.3.0 or newer and supports CLion 2025.3 through
             2026.2 with the MSVC toolchain on Windows.</p>
@@ -102,11 +111,11 @@ intellijPlatform {
             create(IntelliJPlatformType.CLion, providers.gradleProperty("verifyAgainstVersion"))
         }
 
-        // The defaults minus INTERNAL_API_USAGES, which checkInternalApiUsages enforces instead: it
-        // fails on any internal usage except those listed in verifier-allowed-internal-api.txt. The
-        // verifier's own -ignored-problems does not apply to internal API findings.
+        // The defaults plus INTERNAL_API_USAGES: the Marketplace rejects a plugin that uses any
+        // internal platform API, so the build must not let one through.
         failureLevel = listOf(
             VerifyPluginTask.FailureLevel.COMPATIBILITY_PROBLEMS,
+            VerifyPluginTask.FailureLevel.INTERNAL_API_USAGES,
             VerifyPluginTask.FailureLevel.OVERRIDE_ONLY_API_USAGES
         )
     }
@@ -185,32 +194,3 @@ kotlin {
         jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_21)
     }
 }
-
-// Internal API is allowed only where verifier-allowed-internal-api.txt says so; see failureLevel.
-val checkInternalApiUsages = tasks.register("checkInternalApiUsages") {
-    description = "Fails on internal API usages the plugin verifier found that are not explicitly allowed."
-    val allowList = layout.projectDirectory.file("verifier-allowed-internal-api.txt")
-    val reports = layout.buildDirectory.dir("reports/pluginVerifier")
-    inputs.file(allowList)
-    doLast {
-        val allowed = allowList.asFile.readLines()
-            .map { it.trim() }
-            .filter { it.isNotEmpty() && !it.startsWith("#") }
-            .map { Regex(it) }
-        val usages = reports.get().asFile.walkTopDown()
-            .filter { it.name == "internal-api-usages.txt" }
-            .flatMap { it.readLines().asSequence() }
-            .filter { it.isNotBlank() }
-            .distinct()
-            .toList()
-        val unexpected = usages.filter { usage -> allowed.none { it.containsMatchIn(usage) } }
-        // An entry nothing matches any more is an exemption kept for code that is gone.
-        val stale = allowed.filter { regex -> usages.none { regex.containsMatchIn(it) } }
-        val problems = unexpected.map { "Internal API usage not in verifier-allowed-internal-api.txt: $it" } +
-            stale.map { "Allowed internal API no longer used; remove it: ${it.pattern}" }
-        if (problems.isNotEmpty()) {
-            throw GradleException(problems.joinToString(System.lineSeparator()))
-        }
-    }
-}
-tasks.named("verifyPlugin") { finalizedBy(checkInternalApiUsages) }
