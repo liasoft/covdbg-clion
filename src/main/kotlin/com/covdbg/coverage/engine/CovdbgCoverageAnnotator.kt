@@ -3,6 +3,7 @@ package com.covdbg.coverage.engine
 import com.intellij.coverage.BaseCoverageAnnotator.DirCoverageInfo
 import com.intellij.coverage.CoverageDataManager
 import com.intellij.coverage.CoverageEngine
+import com.intellij.coverage.CoverageSuitesBundle
 import com.intellij.coverage.SimpleCoverageAnnotator
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.components.Service
@@ -27,6 +28,16 @@ import com.intellij.rt.coverage.data.ProjectData
  */
 @Service(Service.Level.PROJECT)
 class CovdbgCoverageAnnotator(private val project: Project) : SimpleCoverageAnnotator(project) {
+
+    /**
+     * Also how the gutter learns that covdbg coverage was hidden or its tab closed: the platform tells
+     * no suite listener, only the engine's annotator, and has already dropped the bundle from the
+     * active ones by then.
+     */
+    override fun onSuiteChosen(newSuite: CoverageSuitesBundle?) {
+        super.onSuiteChosen(newSuite)
+        CovdbgEditorCoverage.getInstance(project).refresh()
+    }
 
     override fun collectFolderCoverage(
         dir: VirtualFile,

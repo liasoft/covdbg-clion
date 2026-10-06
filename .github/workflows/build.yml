@@ -94,7 +94,7 @@ jobs:
 
       - uses: gradle/actions/setup-gradle@v6
 
-      # Also runs checkInternalApiUsages, which verifyPlugin is finalized by.
+      # Fails on any internal API usage, which the Marketplace rejects.
       - name: Verify plugin
         run: ./gradlew verifyPlugin
 
