@@ -63,6 +63,15 @@ intellijPlatform {
         }
 
         changeNotes = """
+            <h3>1.0.1</h3>
+            <ul>
+              <li>The editor gutter's coverage marks are now drawn by the plugin itself, so it no longer
+                  relies on internal IntelliJ Platform API. They look as before, in the color scheme's
+                  coverage colors.</li>
+              <li>Hovering over a coverage mark shows the line's hits. Clicking it opens a popup with
+                  the hits, buttons to step to the previous or next coverage mark, and the Hide
+                  coverage link.</li>
+            </ul>
             <h3>1.0.0</h3>
             <p>First release. Requires covdbg 1.3.0 or newer and supports CLion 2025.3 through
             2026.2 with the MSVC toolchain on Windows.</p>
