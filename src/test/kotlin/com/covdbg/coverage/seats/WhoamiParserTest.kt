@@ -52,16 +52,14 @@ class WhoamiParserTest {
 
     @Test
     fun `reads the team name that covdbg 1_4 appends`() {
-        val status = WhoamiParser.parse(0, "Signed in as dev@example.com for Acme.
-", projectTokenSet = false)
+        val status = WhoamiParser.parse(0, "Signed in as dev@example.com for Acme.\n", projectTokenSet = false)
         assertEquals(SignInStatus.SignedIn("dev@example.com", "Acme"), status)
         assertEquals("dev@example.com · Acme", status.label)
     }
 
     @Test
     fun `a team name containing for splits at the first for`() {
-        val status = WhoamiParser.parse(0, "Signed in as dev@example.com for Team for Acme.
-", projectTokenSet = false)
+        val status = WhoamiParser.parse(0, "Signed in as dev@example.com for Team for Acme.\n", projectTokenSet = false)
         assertEquals(SignInStatus.SignedIn("dev@example.com", "Team for Acme"), status)
     }
 
