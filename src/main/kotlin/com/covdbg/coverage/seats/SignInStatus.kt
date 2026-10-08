@@ -18,7 +18,7 @@ sealed interface SignInStatus {
     val tooltip: String
 
     data class SignedIn(val email: String, val teamName: String? = null) : SignInStatus {
-        override val label get() = if (teamName == null) email else "$email 00B7 $teamName"
+        override val label get() = if (teamName == null) email else "$email \u00B7 $teamName"
         override val tooltip get() =
             if (teamName == null) "Signed in to covdbg as $email" else "Signed in to covdbg as $email for $teamName"
     }
