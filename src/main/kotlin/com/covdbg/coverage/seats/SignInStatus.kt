@@ -17,9 +17,10 @@ sealed interface SignInStatus {
     /** The same state, explained. */
     val tooltip: String
 
-    data class SignedIn(val email: String) : SignInStatus {
-        override val label get() = email
-        override val tooltip get() = "Signed in to covdbg as $email"
+    data class SignedIn(val email: String, val teamName: String? = null) : SignInStatus {
+        override val label get() = if (teamName == null) email else "$email 00B7 $teamName"
+        override val tooltip get() =
+            if (teamName == null) "Signed in to covdbg as $email" else "Signed in to covdbg as $email for $teamName"
     }
 
     data object NotSignedIn : SignInStatus {
@@ -47,9 +48,20 @@ sealed interface SignInStatus {
 }
 
 /**
+ * Splits the identity part of a "Signed in as ..." line into e-mail and optional team name.
+ *
+ * covdbg 1.4.0+ prints `<email> for <team name>`, 1.3.x just `<email>`. An e-mail cannot contain a
+ * space but a team name can contain " for " (`Team for Acme`), so the split is at the FIRST " for ".
+ */
+internal fun splitIdentity(identity: String): Pair<String, String?> {
+    val match = Regex("""^(\S+) for (.+)$""").find(identity.trim()) ?: return identity.trim() to null
+    return match.groupValues[1] to match.groupValues[2].trim()
+}
+
+/**
  * Parses `covdbg whoami`.
  *
- * covdbg prints `Signed in as <email>.` and exits 0, or `Not signed in.` and exits **1**.
+ * covdbg prints `Signed in as <email> for <team name>.` (1.3.x: `Signed in as <email>.`) and exits 0, or `Not signed in.` and exits **1**.
  *
  * The important subtlety: `whoami` reads only the stored session and ignores COVDBG_PROJECT_TOKEN
  * entirely. In a token environment it reports "not signed in" while runs are perfectly licensed, so
@@ -68,7 +80,8 @@ object WhoamiParser {
         for (line in stdout.lines()) {
             val trimmed = line.trim()
             SIGNED_IN.find(trimmed)?.let { match ->
-                return SignInStatus.SignedIn(match.groupValues[1].trim())
+                val (email, team) = splitIdentity(match.groupValues[1])
+                return SignInStatus.SignedIn(email, team)
             }
             if (NOT_SIGNED_IN.matches(trimmed)) {
                 return if (projectTokenSet) SignInStatus.ProjectToken else SignInStatus.NotSignedIn

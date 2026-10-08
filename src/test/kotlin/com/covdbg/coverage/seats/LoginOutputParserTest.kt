@@ -47,6 +47,23 @@ class LoginOutputParserTest {
         val events = eventsOf("Signed in as dev@example.com.")
         val signedIn = assertInstanceOf(LoginEvent.SignedIn::class.java, events.single())
         assertEquals("dev@example.com", signedIn.email)
+        assertNull(signedIn.teamName)
+    }
+
+    @Test
+    fun `reads the team name from the signed-in line`() {
+        val signedIn = assertInstanceOf(
+            LoginEvent.SignedIn::class.java,
+            eventsOf("Signed in as dev@example.com for Team for Acme.").single()
+        )
+        assertEquals("dev@example.com", signedIn.email)
+        assertEquals("Team for Acme", signedIn.teamName)
+    }
+
+    @Test
+    fun `an existing session with a team reports only the email`() {
+        val events = eventsOf("Already signed in as dev@example.com for Acme. Signing in again replaces it.")
+        assertEquals("dev@example.com", assertInstanceOf(LoginEvent.AlreadySignedIn::class.java, events.single()).email)
     }
 
     @Test
@@ -54,6 +71,7 @@ class LoginOutputParserTest {
         val events = eventsOf("Signed in.")
         val signedIn = assertInstanceOf(LoginEvent.SignedIn::class.java, events.single())
         assertNull(signedIn.email)
+        assertNull(signedIn.teamName)
     }
 
     @Test
