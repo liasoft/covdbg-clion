@@ -45,6 +45,7 @@ class CovdbgLoginTask(project: Project) :
 
     /** Whoever covdbg last named, whether an existing session or the completed sign-in. */
     private var lastKnownEmail: String? = null
+    private var lastKnownTeam: String? = null
     private var sawDeviceCode = false
 
     override fun run(indicator: ProgressIndicator) {
@@ -126,7 +127,10 @@ class CovdbgLoginTask(project: Project) :
                 showPrompt(event.url, event.code)
             }
             LoginEvent.Waiting -> indicator.text = "Waiting for browser confirmation"
-            is LoginEvent.SignedIn -> event.email?.let { lastKnownEmail = it }
+            is LoginEvent.SignedIn -> {
+                event.email?.let { lastKnownEmail = it }
+                lastKnownTeam = event.teamName
+            }
             null -> {}
         }
     }
@@ -159,7 +163,8 @@ class CovdbgLoginTask(project: Project) :
     }
 
     private fun notifySignedIn() {
-        val headline = lastKnownEmail?.let { "Signed in to covdbg as ${CovdbgNotifications.escape(it)}" } ?: "Signed in to covdbg"
+        val team = lastKnownTeam?.let { " for ${CovdbgNotifications.escape(it)}" }.orEmpty()
+        val headline = lastKnownEmail?.let { "Signed in to covdbg as ${CovdbgNotifications.escape(it)}$team" } ?: "Signed in to covdbg"
         CovdbgNotifications.info(
             project,
             "$headline.<br/>Seats, teams and your personal lock are managed at " +

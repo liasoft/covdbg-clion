@@ -11,7 +11,7 @@ sealed interface LoginEvent {
     data object Waiting : LoginEvent
 
     /** Sign-in completed. covdbg omits the email when the service returned none. */
-    data class SignedIn(val email: String?) : LoginEvent
+    data class SignedIn(val email: String?, val teamName: String? = null) : LoginEvent
 }
 
 /**
@@ -36,7 +36,7 @@ class LoginOutputParser {
         if (trimmed.isEmpty()) return null
 
         ALREADY_SIGNED_IN.find(trimmed)?.let { match ->
-            return LoginEvent.AlreadySignedIn(match.groupValues[1].trim())
+            return LoginEvent.AlreadySignedIn(splitIdentity(match.groupValues[1]).first)
         }
 
         OPEN_URL.find(trimmed)?.let { match ->
@@ -55,7 +55,9 @@ class LoginOutputParser {
         }
 
         SIGNED_IN.find(trimmed)?.let { match ->
-            return LoginEvent.SignedIn(match.groupValues[1].takeIf { it.isNotBlank() }?.trim())
+            val identity = match.groupValues[1].takeIf { it.isNotBlank() } ?: return LoginEvent.SignedIn(null)
+            val (email, team) = splitIdentity(identity)
+            return LoginEvent.SignedIn(email, team)
         }
 
         return null
