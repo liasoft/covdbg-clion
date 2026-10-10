@@ -48,11 +48,17 @@ rejecting an option, and the plugin says so.
    project root. It is meant to be committed and edited: the include and exclude patterns decide what
    is measured. Without one, covdbg refuses the run.
 4. **Run.** Pick *Run 'target' with Covdbg* from the run-configuration dropdown, or create a covdbg
-   run configuration directly.
+   run configuration directly. CTest configurations, *All CTests* among them, work too.
 
 ## What a run does
 
 One covdbg invocation, writing `.covdbg/<target>.covdb` under the project root.
+
+A CTest configuration runs `ctest.exe`, which has no symbols of its own and starts the test binaries
+itself. The plugin runs it with `--follow-children`, so covdbg runs CTest unmeasured and measures
+every test binary it starts, merged into one database named after the configuration:
+`.covdbg/All CTests.covdb`. CLion's test tree and rerunning failed tests work as in a normal run.
+This needs **covdbg 1.5.0 or newer**; with an older covdbg the plugin refuses the run and says so.
 
 covdbg analyses the target binary before running it, so functions and lines the run never executes
 already appear with zero hits — there is no separate analysis pass to wait for. Code compiled into a

@@ -29,6 +29,15 @@ data class CovdbgVersion(
 
         fun tooOldMessage(found: CovdbgVersion) =
             "$REQUIREMENT. Found $found."
+
+        /**
+         * The oldest covdbg that can measure a CTest run: ctest.exe has no symbols, and covdbg only
+         * runs a root like that unmeasured, following the test binaries it starts, from 1.5.0.
+         */
+        val CTEST_MINIMUM = CovdbgVersion(1, 5, 0)
+
+        fun ctestTooOldMessage(found: CovdbgVersion) =
+            "Coverage for CTest run configurations needs covdbg $CTEST_MINIMUM or newer. Found $found."
     }
 }
 
@@ -83,6 +92,10 @@ class CovdbgRuntimeInfoService {
         cache[key] = version
         return version
     }
+
+    /** The version an earlier probe found, without running covdbg; safe on the EDT. */
+    fun cachedVersion(exePath: String): CovdbgVersion? =
+        cacheKey(exePath)?.let { cache[it] }
 
     /**
      * True the first time a known-too-old covdbg is seen for this executable, so the warning is
