@@ -63,6 +63,13 @@ intellijPlatform {
         }
 
         changeNotes = """
+            <h3>1.1.0</h3>
+            <ul>
+              <li>CTest run configurations, <i>All CTests</i> among them, can be run with covdbg.
+                  CTest runs unmeasured and covdbg measures every test binary it starts, merged into
+                  one database named after the configuration. CLion's test tree and rerunning failed
+                  tests work as before. Requires covdbg 1.5.0 or newer.</li>
+            </ul>
             <h3>1.0.1</h3>
             <ul>
               <li>The editor gutter's coverage marks are now drawn by the plugin itself, so it no longer

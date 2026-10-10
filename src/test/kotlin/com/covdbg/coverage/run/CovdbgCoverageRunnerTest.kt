@@ -4,17 +4,18 @@ import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 
-/** Which configuration types "Run with covdbg" is offered for. */
+/** Which configurations are run through CTest, and so need covdbg to follow ctest.exe into the tests. */
 class CovdbgCoverageRunnerTest {
 
     @Test
-    fun `ctest is not offered - covdbg would measure ctest exe instead of the tests`() {
-        // CLion's id for CTest, the same in 2025.3 and 2026.2.
-        assertFalse(CovdbgCoverageRunner.isSupportedType("CTestRunConfiguration"))
+    fun `ctest is recognised by its type id`() {
+        // CLion's id for CTest, "All CTests" included, the same in 2025.3 and 2026.2.
+        assertTrue(CovdbgCoverageRunner.isCTest("CTestRunConfiguration"))
     }
 
     @Test
-    fun `every other configuration type is offered`() {
-        assertTrue(CovdbgCoverageRunner.isSupportedType("SomeApplicationRunConfiguration"))
+    fun `every other configuration type runs its target directly`() {
+        assertFalse(CovdbgCoverageRunner.isCTest("CMakeRunConfiguration"))
+        assertFalse(CovdbgCoverageRunner.isCTest("SomeApplicationRunConfiguration"))
     }
 }

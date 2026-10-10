@@ -4,9 +4,11 @@ import com.covdbg.coverage.settings.CovdbgSettings
 import com.intellij.execution.ExecutionException
 import com.intellij.execution.configurations.GeneralCommandLine
 import com.intellij.execution.configurations.PtyCommandLine
+import com.intellij.execution.configurations.RunConfiguration
 import com.intellij.execution.configurations.RunnerSettings
 import com.intellij.execution.process.BaseProcessHandler
 import com.intellij.execution.process.ProcessHandler
+import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.util.Key
 import com.intellij.openapi.util.SystemInfo
 import com.jetbrains.cidr.cpp.toolchains.CPPEnvironment
@@ -15,6 +17,7 @@ import com.jetbrains.cidr.execution.ConfigurationExtensionContext
 import com.jetbrains.cidr.lang.toolchains.CidrToolEnvironment
 import com.jetbrains.cidr.lang.workspace.OCRunConfiguration
 import com.pty4j.PtyProcess
+import java.io.File
 
 /**
  * Puts covdbg in front of the target when a CLion run configuration is run with covdbg.
@@ -57,13 +60,24 @@ class CovdbgRunConfigurationExtension : CidrRunConfigurationExtensionBase() {
         val covdbg = CovdbgExecutableResolver.pathFor(project)
             ?: throw ExecutionException(CovdbgExecutableResolver.NOT_FOUND_MESSAGE)
 
+        // Through the RunConfiguration interface: CMakeAppRunConfiguration's own getType() override
+        // was removed in 2026.2.
+        val isCTest = CovdbgCoverageRunner.isCTest((configuration as RunConfiguration).type.id)
+        if (isCTest) {
+            refuseCovdbgTooOldForCTest(covdbg)
+        }
+
+        // CTest's command line is ctest.exe, which has no symbols and starts the tests itself: follow
+        // it into them, and name the database after the configuration ("All CTests") rather than
+        // after ctest.exe, so two CTest configurations do not overwrite each other.
         val plan = CovdbgRunPlan.create(
             project,
             target = cmdLine.exePath,
             workingDirectory = cmdLine.workingDirectory?.toString(),
             configOverride = "",
-            followChildren = CovdbgSettings.getInstance(project).state.followChildren,
-            mode = "ONE_SHOT"
+            followChildren = isCTest || CovdbgSettings.getInstance(project).state.followChildren,
+            mode = "ONE_SHOT",
+            outputName = if (isCTest) configuration.name else File(cmdLine.exePath).nameWithoutExtension
         )
         plan.prepareOutput()
 
@@ -89,6 +103,24 @@ class CovdbgRunConfigurationExtension : CidrRunConfigurationExtensionBase() {
             (handler as? BaseProcessHandler<*>)?.process is PtyProcess
         handler.addProcessListener(CovdbgRunMonitor(configuration.project, plan, usesPty))
         handler.putUserData(ATTACHED, true)
+    }
+
+    /**
+     * An older covdbg refuses ctest.exe outright ("no functions to track"), which would read as a filter
+     * problem. Say what is actually wrong instead. A version that cannot be read runs anyway, for the
+     * reasons [CovdbgCoverageRunner] gives for its soft version check.
+     */
+    private fun refuseCovdbgTooOldForCTest(covdbg: String) {
+        val info = CovdbgRuntimeInfoService.getInstance()
+        // Running covdbg to ask is not allowed on the EDT; the version an earlier probe found is.
+        val version = if (ApplicationManager.getApplication().isDispatchThread) {
+            info.cachedVersion(covdbg)
+        } else {
+            info.version(covdbg)
+        } ?: return
+        if (version < CovdbgVersion.CTEST_MINIMUM) {
+            throw ExecutionException(CovdbgVersion.ctestTooOldMessage(version))
+        }
     }
 
     companion object {

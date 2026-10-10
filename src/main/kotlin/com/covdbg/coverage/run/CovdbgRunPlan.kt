@@ -68,6 +68,8 @@ class CovdbgRunPlan private constructor(
          *   where its log goes; blank means the project root, never the IDE's own directory.
          * @param configOverride A run-configuration-level .covdbg.yaml, taking precedence over the
          *   project setting. Blank for none.
+         * @param outputName What the database is named after: the target's name, unless the target
+         *   says nothing about the run, as ctest.exe does not.
          */
         fun create(
             project: Project,
@@ -75,7 +77,8 @@ class CovdbgRunPlan private constructor(
             workingDirectory: String?,
             configOverride: String,
             followChildren: Boolean,
-            mode: String
+            mode: String,
+            outputName: String = File(target).nameWithoutExtension
         ): CovdbgRunPlan {
             // An ExecutionException reaches the user as the run's error; anything else would be
             // reported as an internal IDE error.
@@ -93,7 +96,7 @@ class CovdbgRunPlan private constructor(
                     target
                 ),
                 searchedDirectories = CovdbgConfigLocator.searchedDirectories(projectRoot, workDir, target),
-                outputCovdbPath = CovdbgLayout.covdbFor(projectRoot, target).absolutePath,
+                outputCovdbPath = CovdbgLayout.covdbNamed(projectRoot, outputName).absolutePath,
                 // A relative setting is taken from the project root, like a relative config path: covdbg
                 // would resolve it against the working directory, and "Open Log" against the IDE's.
                 logFilePath = state.logFile.ifBlank { null }

@@ -2,7 +2,6 @@ package com.covdbg.coverage.run
 
 import com.covdbg.coverage.CovdbgNotifications
 import com.intellij.execution.ExecutionTargetManager
-import com.intellij.execution.configurations.RunConfiguration
 import com.intellij.execution.configurations.RunProfile
 import com.intellij.execution.configurations.RunProfileState
 import com.intellij.execution.configurations.RunnerSettings
@@ -37,15 +36,16 @@ class CovdbgCoverageRunner : GenericProgramRunner<RunnerSettings>() {
         private val NON_MSVC_MARKERS = listOf("wsl", "mingw", "cygwin")
 
         /**
-         * Configuration types whose command line is not the program under test, so covdbg would
-         * instrument the wrong process. Matched by type id: the classes are internal in 2026.2.
+         * CLion's CTest configuration, "All CTests" among them. Matched by type id: the class is
+         * internal in 2026.2.
          *
-         * `CTestRunConfiguration` launches `ctest.exe`, which starts the test binaries itself. covdbg
-         * would measure CTest - which has no PDB and nothing to track - and never see the tests.
+         * Its command line is `ctest.exe`, which starts the test binaries itself and has no symbols of
+         * its own. [CovdbgRunConfigurationExtension] runs it with `--follow-children`, so covdbg runs
+         * CTest unmeasured and measures the tests it starts.
          */
-        internal val UNSUPPORTED_TYPE_IDS = setOf("CTestRunConfiguration")
+        internal const val CTEST_TYPE_ID = "CTestRunConfiguration"
 
-        internal fun isSupportedType(typeId: String): Boolean = typeId !in UNSUPPORTED_TYPE_IDS
+        internal fun isCTest(typeId: String): Boolean = typeId == CTEST_TYPE_ID
     }
 
     override fun getRunnerId(): String = RUNNER_ID
@@ -53,9 +53,6 @@ class CovdbgCoverageRunner : GenericProgramRunner<RunnerSettings>() {
     override fun canRun(executorId: String, profile: RunProfile): Boolean {
         if (executorId != CovdbgExecutor.EXECUTOR_ID) return false
         if (profile !is OCRunConfiguration<*, *>) return false
-        // Through the RunConfiguration interface: CMakeAppRunConfiguration's own getType() override
-        // was removed in 2026.2.
-        if (!isSupportedType((profile as RunConfiguration).type.id)) return false
 
         // Hide the executor when the active CMake profile is not Visual Studio / MSVC
         val target = ExecutionTargetManager.getInstance(profile.project).activeTarget
