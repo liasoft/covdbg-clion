@@ -150,11 +150,13 @@ launch the IDE, so it should not recur; if something else starts that GDB, delet
 rather than the multi-gigabyte cache entry:
 
 ```powershell
-$cache = "$env:USERPROFILE\.gradle\caches\9.0.0\transforms\<hash>\transformed"
+$cache = "$env:USERPROFILE\.gradle\caches\<gradle-version>\transforms\<hash>\transformed"
 Get-ChildItem $cache -Recurse -Directory -Filter __pycache__ | Remove-Item -Recurse -Force
 ```
 
-The `<hash>` is named in the error message. Only the added `.pyc` files need to go; removing them
+Take the path from the error message: it names the `<hash>`, and `<gradle-version>` is the Gradle
+version the wrapper runs (`distributionUrl` in `gradle/wrapper/gradle-wrapper.properties`; the
+cache directory is named after it and changes whenever the wrapper is upgraded). Only the added `.pyc` files need to go; removing them
 restores the tree Gradle hashed.
 
 ## Contributing
