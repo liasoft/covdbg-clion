@@ -137,8 +137,11 @@ yourself, e.g. `.\gradlew.bat buildPlugin -PpluginVersion=1.0.0`.
 
 CI (`.github/workflows/build.yml`) runs `test` and `buildPlugin` on Windows and `verifyPlugin` on
 Linux for every push to the git flow branches and every pull request. The plugin zip is attached to
-each run as the `covdbg-clion-<version>` artifact. A job that publishes to the JetBrains Marketplace
-on a GitHub release is prepared but disabled; the comment above it lists what enabling it takes.
+each run as the `covdbg-clion-<version>` artifact. Publishing a GitHub release additionally runs the
+`Publish to Marketplace` job, which signs the plugin and publishes it to the JetBrains Marketplace
+using the repository's `marketplace` environment; it is skipped on ordinary pushes and pull requests.
+The job can only publish updates: the plugin's first version must be uploaded by hand, and the signed
+zip is attached to the run for that. The comment above the job lists the required environment secrets.
 
 ### Troubleshooting the build
 
