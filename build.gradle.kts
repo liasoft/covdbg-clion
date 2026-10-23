@@ -69,6 +69,10 @@ intellijPlatform {
                   CTest runs unmeasured and covdbg measures every test binary it starts, merged into
                   one database named after the configuration. CLion's test tree and rerunning failed
                   tests work as before. Requires covdbg 1.5.0 or newer.</li>
+              <li>With covdbg 1.4.0 or newer, the sign-in status shows the team you signed in for
+                  next to your e-mail address, and the sign-in notification and tooltip name it too.
+                  Before, the team was shown as part of the e-mail address. With covdbg 1.3.0 the
+                  status shows the e-mail address as before.</li>
             </ul>
             <h3>1.0.1</h3>
             <ul>
