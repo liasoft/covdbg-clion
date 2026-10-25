@@ -28,6 +28,13 @@ Earlier covdbg releases will not work: the plugin relies on seat licensing and t
 options introduced in covdbg 1.3.0. When the installed covdbg is too old, a run fails with covdbg
 rejecting an option, and the plugin says so.
 
+The plugin shows `.covdb` files of covdbg 1.3.0 and newer: schema versions 7, 8 (covdbg 1.5.0) and
+9 (covdbg 1.5.1). From schema 9, functions the linker folds into one (`/OPT:ICF`) are a function
+each, and the run summary counts each of them as covered when their shared code ran. *Export HTML
+Report* runs the installed covdbg, which opens only its own schema version: covdbg 1.5.1 refuses a
+database recorded with 1.5.0 or earlier, and 1.5.0 one recorded with 1.5.1, and the plugin shows
+covdbg's message. Record the coverage again with the installed covdbg to export it.
+
 ## Getting started
 
 1. **Check that covdbg is found.** Nothing to do if covdbg is on `PATH`, which its installer and the

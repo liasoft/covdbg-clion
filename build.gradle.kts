@@ -63,6 +63,15 @@ intellijPlatform {
         }
 
         changeNotes = """
+            <h3>1.2.0</h3>
+            <ul>
+              <li>Reads coverage recorded with covdbg 1.5.1, whose database (schema version 9) keeps
+                  functions the linker folds into one (<code>/OPT:ICF</code>) as a function each. The
+                  run summary counts each of them as covered when their shared code ran, where earlier
+                  plugin versions would show all but one of them as not covered. A line such functions
+                  share counts its basic blocks once. Coverage recorded with covdbg 1.3.0 through 1.5.0 is still shown as
+                  before.</li>
+            </ul>
             <h3>1.1.0</h3>
             <ul>
               <li>CTest run configurations, <i>All CTests</i> among them, can be run with covdbg.
