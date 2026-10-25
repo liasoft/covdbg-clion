@@ -105,7 +105,10 @@ class CovdbCoverageRunner : CoverageRunner() {
     companion object {
         const val ID = "covdbg"
 
-        /** Schema v7 (natural keys) is what covdbg 1.3.0 writes and what the queries rely on. */
+        /**
+         * Schema v7 (natural keys) is what covdbg 1.3.0 writes and what the queries rely on. Versions 8
+         * (covdbg 1.5.0) and 9 (1.5.1) are read the same way, see [CovdbReader].
+         */
         const val MIN_SCHEMA_VERSION = 7
 
         fun getInstance(): CovdbCoverageRunner = getInstance(CovdbCoverageRunner::class.java)
