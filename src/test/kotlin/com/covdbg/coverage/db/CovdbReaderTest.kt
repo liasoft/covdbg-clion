@@ -122,7 +122,151 @@ class CovdbReaderTest {
         }
     }
 
+    // ── Schema 9: functions the linker folded into one ──────────────────
+
+    @Test
+    fun `reads a schema 9 database`(@TempDir dir: Path) {
+        CovdbReader(foldedFixture(dir)).use { reader ->
+            assertEquals(9, reader.getSchemaVersion())
+            assertEquals("""C:\proj""", reader.getSourceRoot())
+        }
+    }
+
+    @Test
+    fun `summary counts each folded function as covered when their shared code ran`(@TempDir dir: Path) {
+        // Triple and TripleFolded share start address 100 and its block: each is a row of functions, and
+        // both ran. Counting covered functions by distinct start address made one of them look uncovered.
+        CovdbReader(foldedFixture(dir)).use { reader ->
+            val summary = reader.getCoverageSummary()
+            assertEquals(4, summary.totalFunctions)
+            assertEquals(3, summary.coveredFunctions)
+            assertEquals(3, summary.totalBasicBlocks)
+            assertEquals(2, summary.coveredBasicBlocks)
+            assertEquals(7, summary.totalLines)
+            assertEquals(6, summary.coveredLines)
+        }
+    }
+
+    @Test
+    fun `a line two folded functions share counts its block once`(@TempDir dir: Path) {
+        // common.h:3 has a source location for each of the folded functions, both in block 100.
+        CovdbReader(foldedFixture(dir)).use { reader ->
+            val lines = reader.getAllLineCoverage().associateBy { it.filePath to it.lineNumber }
+            val shared = lines.getValue("""C:\proj\src\common.h""" to 3)
+            assertEquals(1L, shared.executionCount)
+            assertEquals(1, shared.blocks)
+            assertEquals(1, shared.blocksHit)
+        }
+    }
+
+    @Test
+    fun `each folded function's lines stay in its own file`(@TempDir dir: Path) {
+        CovdbReader(foldedFixture(dir)).use { reader ->
+            val lines = reader.getAllLineCoverage()
+            assertEquals(
+                listOf(4, 5),
+                lines.filter { it.filePath == """C:\proj\src\shared-lines-folded.c""" }.map { it.lineNumber }
+            )
+            assertEquals(
+                listOf(48, 49, 70, 80),
+                lines.filter { it.filePath == """C:\proj\src\shared-lines.c""" }.map { it.lineNumber }
+            )
+            assertEquals(7, lines.size)
+            lines.forEach { assertEquals(1, it.blocks, "${it.filePath}:${it.lineNumber}") }
+        }
+    }
+
     // ── Fixture ─────────────────────────────────────────────────────────
+
+    /**
+     * A schema 9 database shaped like the one covdbg 1.5.1 writes for its `tests/cpp/shared-lines`
+     * test: `Triple` (shared-lines.c) and `TripleFolded` (shared-lines-folded.c) are identical, and
+     * `/OPT:ICF` folds them into one function at address 100. Each is a row of `functions`; their one
+     * block has each function's own lines, named by `source_locations.function_name`, and a line of a
+     * header both include (`common.h:3`, as a template's would be) once for each. `main` (200) ran and
+     * names no function (`''`: every function at its block's start); `Unused` (300) never ran.
+     */
+    private fun foldedFixture(dir: Path): String {
+        val path = dir.resolve("folded.covdb").toString()
+        DriverManager.getConnection("jdbc:sqlite:$path").use { connection ->
+            connection.createStatement().use { stmt ->
+                stmt.executeUpdate("CREATE TABLE metadata (key TEXT PRIMARY KEY, value TEXT)")
+                stmt.executeUpdate(
+                    "CREATE TABLE functions (module_path TEXT NOT NULL, start_address INTEGER NOT NULL, " +
+                        "name TEXT NOT NULL, size INTEGER NOT NULL, " +
+                        "PRIMARY KEY (module_path, start_address, name))"
+                )
+                stmt.executeUpdate(
+                    "CREATE TABLE basic_blocks (module_path TEXT, start_address INTEGER, " +
+                        "function_start_address INTEGER DEFAULT 0, hit_count INTEGER, " +
+                        "PRIMARY KEY (module_path, start_address))"
+                )
+                stmt.executeUpdate(
+                    "CREATE TABLE source_locations (module_path TEXT NOT NULL, " +
+                        "block_start_address INTEGER NOT NULL, file_path TEXT NOT NULL, " +
+                        "line_number INTEGER NOT NULL, function_name TEXT NOT NULL DEFAULT '', " +
+                        "PRIMARY KEY (module_path, block_start_address, file_path, line_number, function_name))"
+                )
+                stmt.executeUpdate(
+                    "CREATE TABLE line_coverage (file_path TEXT, line_number INTEGER, " +
+                        "execution_count INTEGER, is_executable INTEGER)"
+                )
+
+                stmt.executeUpdate("INSERT INTO metadata VALUES ('schema_version', '9')")
+                stmt.executeUpdate("""INSERT INTO metadata VALUES ('source_root', 'C:\proj')""")
+
+                stmt.executeUpdate("INSERT INTO functions VALUES ('app.exe', 100, 'Triple', 16)")
+                stmt.executeUpdate("INSERT INTO functions VALUES ('app.exe', 100, 'TripleFolded', 16)")
+                stmt.executeUpdate("INSERT INTO functions VALUES ('app.exe', 200, 'main', 64)")
+                stmt.executeUpdate("INSERT INTO functions VALUES ('app.exe', 300, 'Unused', 16)")
+
+                stmt.executeUpdate("INSERT INTO basic_blocks VALUES ('app.exe', 100, 100, 1)")
+                stmt.executeUpdate("INSERT INTO basic_blocks VALUES ('app.exe', 200, 200, 1)")
+                stmt.executeUpdate("INSERT INTO basic_blocks VALUES ('app.exe', 300, 300, 0)")
+
+                for ((block, file, line, function) in listOf(
+                    Location(100, """C:\proj\src\shared-lines.c""", 48, "Triple"),
+                    Location(100, """C:\proj\src\shared-lines.c""", 49, "Triple"),
+                    Location(100, """C:\proj\src\shared-lines-folded.c""", 4, "TripleFolded"),
+                    Location(100, """C:\proj\src\shared-lines-folded.c""", 5, "TripleFolded"),
+                    Location(100, """C:\proj\src\common.h""", 3, "Triple"),
+                    Location(100, """C:\proj\src\common.h""", 3, "TripleFolded"),
+                    Location(200, """C:\proj\src\shared-lines.c""", 70, ""),
+                    Location(300, """C:\proj\src\shared-lines.c""", 80, "Unused")
+                )) {
+                    connection.prepareStatement("INSERT INTO source_locations VALUES ('app.exe', ?, ?, ?, ?)")
+                        .use { insert ->
+                            insert.setLong(1, block)
+                            insert.setString(2, file)
+                            insert.setInt(3, line)
+                            insert.setString(4, function)
+                            insert.executeUpdate()
+                        }
+                }
+
+                // As covdbg computes line_coverage: a block counts once for a line, also a shared one.
+                for ((file, line, count) in listOf(
+                    Triple("""C:\proj\src\common.h""", 3, 1),
+                    Triple("""C:\proj\src\shared-lines-folded.c""", 4, 1),
+                    Triple("""C:\proj\src\shared-lines-folded.c""", 5, 1),
+                    Triple("""C:\proj\src\shared-lines.c""", 48, 1),
+                    Triple("""C:\proj\src\shared-lines.c""", 49, 1),
+                    Triple("""C:\proj\src\shared-lines.c""", 70, 1),
+                    Triple("""C:\proj\src\shared-lines.c""", 80, 0)
+                )) {
+                    connection.prepareStatement("INSERT INTO line_coverage VALUES (?, ?, ?, 1)").use { insert ->
+                        insert.setString(1, file)
+                        insert.setInt(2, line)
+                        insert.setInt(3, count)
+                        insert.executeUpdate()
+                    }
+                }
+            }
+        }
+        return path
+    }
+
+    private data class Location(val block: Long, val file: String, val line: Int, val function: String)
 
     private fun fixture(dir: Path, name: String, extra: (Connection) -> Unit = {}): String {
         val path = dir.resolve(name).toString()
