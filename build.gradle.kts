@@ -35,7 +35,7 @@ dependencies {
 
         // No testFramework(...) on purpose: see the test dependencies below.
     }
-    implementation("org.xerial:sqlite-jdbc:3.53.4.0")
+    implementation("org.xerial:sqlite-jdbc:3.54.1.0")
 
     // The plugin's own logic (argv building, CLI output parsing, .covdb reading) is deliberately
     // free of Project/EDT dependencies so it can be tested without an IDE fixture.
