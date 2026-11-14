@@ -4,7 +4,7 @@ import org.jetbrains.intellij.platform.gradle.tasks.VerifyPluginTask
 plugins {
     id("java")
     id("org.jetbrains.kotlin.jvm") version "2.1.21"
-    id("org.jetbrains.intellij.platform") version "2.19.0"
+    id("org.jetbrains.intellij.platform") version "2.20.1"
 }
 
 group = "com.covdbg"
@@ -35,7 +35,7 @@ dependencies {
 
         // No testFramework(...) on purpose: see the test dependencies below.
     }
-    implementation("org.xerial:sqlite-jdbc:3.53.4.0")
+    implementation("org.xerial:sqlite-jdbc:3.54.1.0")
 
     // The plugin's own logic (argv building, CLI output parsing, .covdb reading) is deliberately
     // free of Project/EDT dependencies so it can be tested without an IDE fixture.
